@@ -1,0 +1,29 @@
+{
+  "id": "slack-notify-001",
+  "name": "Slack Notification Workflow",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "path": "slack-notify",
+        "httpMethod": "POST"
+      }
+    },
+    {
+      "id": "slack-send",
+      "type": "n8n-nodes-base.slack",
+      "position": [500, 300],
+      "parameters": {
+        "channel": "={{ $json.channel }}",
+        "text": "={{ $json.message }}"
+      }
+    }
+  ],
+  "connections": {
+    "webhook-trigger": {
+      "main": [[{ "node": "slack-send", "type": "main", "index": 0 }]]
+    }
+  }
+}

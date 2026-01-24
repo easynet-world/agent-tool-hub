@@ -1,0 +1,69 @@
+discovery:
+  hotReload:
+    enabled: false
+    debounceMs: 200
+    persistent: true
+  roots:
+    - path: coreTools
+      namespace: core
+    - path: ./examples/groups/web
+      namespace: web
+    - path: ./examples/groups/utils
+      namespace: utils
+    - path: ./examples/groups/dev
+      namespace: dev
+    - path: ./examples/groups/notify
+      namespace: notify
+    - path: ./examples/extra-tools
+      namespace: extra
+    - path: /opt/toolhub/tools
+      namespace: system
+debug:
+  enabled: false
+  level: info
+  includeArgs: false
+  includeResults: false
+  includeRaw: false
+  logEvents: false
+
+runtime:
+  # Runtime behavior and execution defaults.
+  # Include raw adapter responses in ToolResult.
+  includeRaw: true
+  # Default retry count when context doesn't specify.
+  defaultMaxRetries: 2
+
+security:
+  # System-wide sandbox and network policy used by core tools.
+  sandbox:
+    # Absolute path that constrains filesystem tools.
+    root: /tmp/toolhub-sandbox
+  network:
+    # Allowlist for outbound HTTP tools.
+    allowedHosts:
+      - api.github.com
+      - "*.example.com"
+
+adapters:
+  n8n:
+    mode: local
+    local:
+      sqliteDatabase: /tmp/toolhub-n8n.sqlite
+      dataFolder: /tmp/toolhub-n8n-data
+      webInterfaceEnabled: false
+      autoStart: true
+    api:
+      apiBaseUrl: http://localhost:5678
+      apiKey: ""
+      defaultMode: webhook
+      asyncThresholdMs: 30000
+  mcp:
+    endpoint: ""
+    prefix: mcp
+  langchain:
+    tools: {}
+  comfyui:
+    apiBaseUrl: http://localhost:8188
+  skill:
+    definitions: {}
+    handlers: {}
