@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
-import { createToolHub } from "../dist/toolhub-runtime.js";
+import { createToolHubAndInit } from "../dist/toolhub-runtime.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -125,8 +125,7 @@ async function main() {
   const rawConfig = yaml.load(rawConfigText) ?? {};
   const options = mapConfig(rawConfig, path.dirname(configPath));
 
-  const toolHub = createToolHub(options);
-  await toolHub.initAllTools();
+  const toolHub = await createToolHubAndInit(options);
 
   const registry = toolHub.getRegistry();
   const specs = registry.snapshot();
