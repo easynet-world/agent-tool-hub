@@ -162,6 +162,6 @@ async function main() {
 
 main().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`[toolhub] dump-tools failed: ${message}`);
+  console.error(`[agent-tool-hub] dump-tools failed: ${message}`);
   process.exit(1);
 });

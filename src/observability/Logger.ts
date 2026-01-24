@@ -91,7 +91,7 @@ export function resolveDebugOptions(options: DebugOptions = {}): ResolvedDebugOp
     includeResults: options.includeResults ?? false,
     includeRaw: options.includeRaw ?? false,
     logEvents: options.logEvents ?? false,
-    prefix: options.prefix ?? "toolhub",
+    prefix: options.prefix ?? "agent-tool-hub",
   };
 }
 

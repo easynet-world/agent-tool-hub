@@ -1,6 +1,6 @@
-# ToolHub Tools
+# agent-tool-hub Tools
 
-ToolHub is a multi-protocol tool registry + PTC runtime that unifies discovery, governance, and execution for tools across MCP, LangChain, n8n, SKILL, and built-in core tools.
+agent-tool-hub is a multi-protocol tool registry + PTC runtime that unifies discovery, governance, and execution for tools across MCP, LangChain, n8n, SKILL, and built-in core tools.
 
 ## What We Support
 
@@ -28,7 +28,7 @@ ToolHub is a multi-protocol tool registry + PTC runtime that unifies discovery, 
 ### Install
 
 ```bash
-npm i tool-hub
+npm i agent-tool-hub
 ```
 
 - Node >= 18
@@ -36,7 +36,7 @@ npm i tool-hub
 
 ### Configure via `toolhub.yaml`
 
-ToolHub is configured by a YAML file. Keep it simple:
+agent-tool-hub is configured by a YAML file. Keep it simple:
 
 ```yaml
 discovery:
@@ -59,12 +59,12 @@ adapters:
       apiKey: ""
 ```
 
-Your framework can load this config and initialize ToolHub accordingly.
+Your framework can load this config and initialize agent-tool-hub accordingly.
 
 ### Initialize the hub (no manual `initAllTools`)
 
 ```ts
-import { createToolHub } from "tool-hub";
+import { createToolHub } from "agent-tool-hub";
 
 // In our framework, createToolHub auto-initializes tools.
 const hub = createToolHub(/* mapped options from config */);

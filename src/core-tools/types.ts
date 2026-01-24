@@ -43,7 +43,7 @@ export const DEFAULT_CORE_TOOLS_CONFIG: Omit<CoreToolsConfig, "sandboxRoot" | "a
     "fe80::/10",
   ],
   defaultTimeoutMs: 15_000,
-  httpUserAgent: "ToolHub-Core/1.0",
+  httpUserAgent: "agent-tool-hub-core/1.0",
   enableAutoWriteLargeResponses: false,
 };
 

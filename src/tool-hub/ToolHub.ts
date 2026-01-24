@@ -106,7 +106,7 @@ export class ToolHub {
 
   constructor(options: ToolHubInitOptions) {
     this.registry = new ToolRegistry();
-    this.logger = createLogger({ ...options.debug, prefix: "ToolHub" });
+    this.logger = createLogger({ ...options.debug, prefix: "agent-tool-hub" });
 
     const sharedDebug = options.debug;
     const withDebug = <T extends { debug?: DebugOptions }>(
@@ -399,7 +399,7 @@ export class ToolHub {
     const intent: ToolIntent = {
       tool: toolName,
       args,
-      purpose: options.purpose ?? "toolhub.invoke",
+      purpose: options.purpose ?? "agent-tool-hub.invoke",
       idempotencyKey:
         options.idempotencyKey ?? `${requestId}:${taskId}:${toolName}`,
     };
