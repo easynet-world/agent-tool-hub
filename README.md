@@ -69,15 +69,6 @@ import { createAgentToolHub } from "agent-tool-hub";
 const hub = await createAgentToolHub("./toolhub.yaml");
 ```
 
-### Initialize the hub (no manual `initAllTools`)
-
-```ts
-import { createToolHub } from "agent-tool-hub";
-
-// In our framework, createToolHub auto-initializes tools.
-const hub = createToolHub(/* mapped options from config */);
-```
-
 ### List tools
 
 ```ts
