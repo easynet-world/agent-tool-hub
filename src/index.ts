@@ -187,3 +187,10 @@ export type {
   ToolHubInitOptions,
   InvokeOptions,
 } from "./tool-hub/ToolHub.js";
+export { createToolHubAndInitFromConfig } from "./toolhub-runtime.js";
+export { createAgentToolHub } from "./toolhub-runtime.js";
+export {
+  loadToolHubConfig,
+  mapToolHubConfig,
+} from "./config/ToolHubConfig.js";
+export type { ToolHubConfigLoadResult } from "./config/ToolHubConfig.js";

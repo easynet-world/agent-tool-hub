@@ -61,6 +61,14 @@ adapters:
 
 Your framework can load this config and initialize agent-tool-hub accordingly.
 
+### Initialize from a config file path
+
+```ts
+import { createAgentToolHub } from "agent-tool-hub";
+
+const hub = await createAgentToolHub("./toolhub.yaml");
+```
+
 ### Initialize the hub (no manual `initAllTools`)
 
 ```ts

@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@easynet/n8n-local": "^0.0.37",
+    "agent-tool-hub": "file:agent-tool-hub-0.0.1.tgz",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "cockatiel": "^3.2.1",
