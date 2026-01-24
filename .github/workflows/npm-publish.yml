@@ -55,7 +55,7 @@ jobs:
 
       - name: Bump patch version
         if: ${{ steps.bump.outputs.do_bump == 'true' }}
-        run: npm version patch -m "chore(release): %s"
+        run: 'npm version patch -m "chore(release): %s"'
 
       - name: Push version tag
         if: ${{ steps.bump.outputs.do_bump == 'true' }}
