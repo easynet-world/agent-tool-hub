@@ -1,4 +1,5 @@
-export { ToolHub, createToolHub } from "./tool-hub/ToolHub.js";
+import { ToolHub, createToolHub } from "./tool-hub/ToolHub.js";
+export { ToolHub, createToolHub };
 export type { ToolHubInitOptions, InvokeOptions } from "./tool-hub/ToolHub.js";
 
 export async function createToolHubAndInit(
