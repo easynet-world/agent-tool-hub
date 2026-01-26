@@ -316,11 +316,11 @@ export class PTCRuntime {
   private buildDryRunResult(
     spec: ToolSpec,
     args: unknown,
-    ctx: ExecContext,
+    _ctx: ExecContext,
     startTime: number,
     spanId: string,
   ): ToolResult {
-    const durationMs = Date.now() - startTime;
+    void (Date.now() - startTime); // durationMs calculated but not used in dry-run
     this.tracing.endSpan(spanId, "ok");
 
     return {

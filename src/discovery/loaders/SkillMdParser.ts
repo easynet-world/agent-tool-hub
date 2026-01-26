@@ -76,7 +76,7 @@ export function parseSkillMd(
  */
 function parseSimpleYaml(
   yaml: string,
-  filePath: string,
+  _filePath: string,
 ): Partial<SkillFrontmatter> {
   const result: Record<string, string> = {};
   const lines = yaml.split("\n");

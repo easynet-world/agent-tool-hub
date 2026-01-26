@@ -47,7 +47,7 @@ export function emitToolCalled(
 export function recordSuccess(
   spec: ToolSpec,
   durationMs: number,
-  evidence: Evidence[],
+  _evidence: Evidence[],
   spanId: string,
   deps: ObservabilityDependencies,
 ): void {

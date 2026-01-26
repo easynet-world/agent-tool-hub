@@ -1,5 +1,4 @@
 import type { ToolSpec } from "../types/ToolSpec.js";
-import type { DirectoryScannerOptions } from "../discovery/types.js";
 import type { CoreToolsUserConfig } from "../core-tools/CoreToolsModule.js";
 import { DirectoryScanner } from "../discovery/DirectoryScanner.js";
 import { ToolRegistry } from "../registry/ToolRegistry.js";
@@ -57,8 +56,8 @@ export async function refreshTools(
     if (!deps.coreToolsConfig) {
       throw new Error("coreTools config is required when includeCoreTools is true");
     }
-    const coreAdapter = registerCoreTools(deps.registry, deps.coreToolsConfig);
     // Note: coreAdapter registration should be handled by caller
+    registerCoreTools(deps.registry, deps.coreToolsConfig);
   }
   
   deps.registry.bulkRegister(specs);

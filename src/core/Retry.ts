@@ -72,8 +72,8 @@ export async function withRetry<T>(
     onFailedAttempt: (error) => {
       // Apply jitter
       if (jitter > 0 && error.retriesLeft > 0) {
-        const jitterMs = Math.random() * jitter * baseDelayMs;
-        // p-retry handles backoff internally; we just notify
+        // jitterMs calculated but p-retry handles backoff internally
+        void (Math.random() * jitter * baseDelayMs);
       }
 
       // Check if should retry

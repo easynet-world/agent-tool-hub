@@ -57,7 +57,7 @@ export class MCPAdapter implements ToolAdapter {
   private client: MCPClientLike | undefined;
   private readonly endpoint: string;
   private readonly prefix: string;
-  private readonly authToken?: string;
+  private readonly _authToken?: string; // Reserved for future authentication support
   private cachedTools: ToolSpec[] | undefined;
   private cacheExpiry = 0;
   private readonly cacheTtlMs = 30_000; // 30s cache
@@ -67,7 +67,7 @@ export class MCPAdapter implements ToolAdapter {
     this.client = options.client;
     this.endpoint = options.endpoint ?? "";
     this.prefix = options.prefix ?? "mcp";
-    this.authToken = options.authToken;
+    this._authToken = options.authToken;
     this.logger = createLogger({ ...options.debug, prefix: "MCPAdapter" });
   }
 

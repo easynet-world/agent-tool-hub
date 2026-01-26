@@ -76,7 +76,7 @@ export class BudgetManager {
   /**
    * Get effective timeout for a tool invocation.
    */
-  getTimeout(toolName: string, contextTimeoutMs?: number): number {
+  getTimeout(_toolName: string, contextTimeoutMs?: number): number {
     return contextTimeoutMs ?? this.defaultTimeoutMs;
   }
 

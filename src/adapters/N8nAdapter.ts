@@ -91,7 +91,7 @@ export class N8nAdapter implements ToolAdapter {
   private readonly apiBaseUrl: string;
   private readonly apiKey?: string;
   private readonly defaultMode: N8nInvokeMode;
-  private readonly asyncThresholdMs: number;
+  private readonly _asyncThresholdMs: number; // Reserved for future async threshold logic
   private readonly idempotencyStore = new Map<string, unknown>(); // Simple dedup store
   private readonly logger: Logger;
 
@@ -100,7 +100,7 @@ export class N8nAdapter implements ToolAdapter {
     this.apiBaseUrl = options.apiBaseUrl ?? "http://localhost:5678";
     this.apiKey = options.apiKey;
     this.defaultMode = options.defaultMode ?? "webhook";
-    this.asyncThresholdMs = options.asyncThresholdMs ?? 30_000;
+    this._asyncThresholdMs = options.asyncThresholdMs ?? 30_000;
     this.logger = createLogger({ ...options.debug, prefix: "N8nAdapter" });
   }
 

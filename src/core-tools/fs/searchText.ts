@@ -1,7 +1,7 @@
 import { readdir, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
-import { resolve, join, relative } from "node:path";
+import { join, relative } from "node:path";
 import type { ToolSpec } from "../../types/ToolSpec.js";
 import type { CoreToolHandler } from "../types.js";
 import { resolveSandboxedPath } from "../security/sandbox.js";

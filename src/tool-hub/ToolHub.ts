@@ -29,7 +29,7 @@ import { SkillAdapter } from "../adapters/SkillAdapter.js";
 import { registerCoreTools } from "../core-tools/CoreToolsModule.js";
 import { initAllTools, refreshTools, splitRoots } from "./ToolHubDiscovery.js";
 import { watchRoots, unwatchRoots } from "./ToolHubWatcher.js";
-import { rootPath, rootKey } from "./ToolHubHelpers.js";
+import { rootKey } from "./ToolHubHelpers.js";
 
 export interface ToolMetadata {
   name: string;
