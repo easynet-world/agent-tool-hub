@@ -23,11 +23,12 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "dump:tools": "npm run build && node scripts/dump-tools.mjs"
+    "dump:tools": "npm run build && node scripts/dump-tools.mjs",
+    "lint:lines": "./scripts/check-line-count.sh",
+    "lint:functions": "python3 scripts/check-function-length.py"
   },
   "dependencies": {
     "@easynet/n8n-local": "^0.0.37",
-    "agent-tool-hub": "file:agent-tool-hub-0.0.1.tgz",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "cockatiel": "^3.2.1",

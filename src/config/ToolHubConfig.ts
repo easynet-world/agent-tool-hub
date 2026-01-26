@@ -10,25 +10,15 @@ export interface ToolHubConfigLoadResult {
   options: ToolHubInitOptions;
 }
 
-export function mapToolHubConfig(
-  raw: unknown,
+function resolveRoots(
+  rootsRaw: Array<string | { path: string; namespace?: string; config?: CoreToolsUserConfig }>,
   configDir: string,
-): ToolHubInitOptions {
-  const config = (raw ?? {}) as Record<string, any>;
-  const toolHub = (config.toolHub ?? {}) as Record<string, any>;
-  const discovery = (config.discovery ?? toolHub.discovery ?? {}) as Record<string, any>;
-  const system = (config.system ?? {}) as Record<string, any>;
-  const security = (config.security ?? {}) as Record<string, any>;
-  const runtime = system.runtime ?? config.runtime ?? {};
-  const coreToolsRaw =
-    (system.coreTools ?? config.coreTools ?? {}) as Record<string, any>;
-  const adapters = (config.adapters ?? {}) as Record<string, any>;
-
+): {
+  roots: Array<string | { path: string; namespace?: string }>;
+  coreToolsInlineConfig: CoreToolsUserConfig | undefined;
+} {
   let coreToolsInlineConfig: CoreToolsUserConfig | undefined;
-  const roots = ((discovery.roots ?? toolHub.roots ?? []) as Array<
-    | string
-    | { path: string; namespace?: string; config?: CoreToolsUserConfig }
-  >).map((root) => {
+  const roots = rootsRaw.map((root) => {
     if (typeof root === "string") {
       if (root === "coreTools") return root;
       return path.isAbsolute(root) ? root : path.resolve(configDir, root);
@@ -42,8 +32,15 @@ export function mapToolHubConfig(
       : path.resolve(configDir, root.path);
     return { path: resolvedPath, namespace: root.namespace };
   });
+  return { roots, coreToolsInlineConfig };
+}
 
-  const coreTools = (coreToolsInlineConfig ?? coreToolsRaw ?? {}) as Record<string, any>;
+function extractCoreToolsConfig(
+  coreTools: Record<string, any>,
+  security: Record<string, any>,
+  system: Record<string, any>,
+  configDir: string,
+): CoreToolsUserConfig {
   const sandboxRoot =
     coreTools.sandboxRoot ??
     coreTools.sandbox?.root ??
@@ -60,46 +57,45 @@ export function mapToolHubConfig(
     security.network?.blockedCidrs ??
     system.network?.blockedCidrs;
   const maxReadBytes =
-    coreTools.maxReadBytes ??
-    coreTools.limits?.maxReadBytes;
+    coreTools.maxReadBytes ?? coreTools.limits?.maxReadBytes;
   const maxHttpBytes =
-    coreTools.maxHttpBytes ??
-    coreTools.limits?.maxHttpBytes;
+    coreTools.maxHttpBytes ?? coreTools.limits?.maxHttpBytes;
   const maxDownloadBytes =
-    coreTools.maxDownloadBytes ??
-    coreTools.limits?.maxDownloadBytes;
+    coreTools.maxDownloadBytes ?? coreTools.limits?.maxDownloadBytes;
   const defaultTimeoutMs =
-    coreTools.defaultTimeoutMs ??
-    coreTools.limits?.defaultTimeoutMs;
+    coreTools.defaultTimeoutMs ?? coreTools.limits?.defaultTimeoutMs;
   const httpUserAgent =
-    coreTools.httpUserAgent ??
-    coreTools.http?.userAgent;
+    coreTools.httpUserAgent ?? coreTools.http?.userAgent;
   const enableAutoWriteLargeResponses =
     coreTools.enableAutoWriteLargeResponses ??
     coreTools.http?.enableAutoWriteLargeResponses;
 
-  const includeCoreTools = roots.some((root) => {
-    if (typeof root === "string") return root === "coreTools";
-    return root.path === "coreTools";
-  });
-  const coreToolsConfig = includeCoreTools
-    ? {
-        sandboxRoot: sandboxRoot
-          ? (path.isAbsolute(String(sandboxRoot))
-              ? String(sandboxRoot)
-              : path.resolve(configDir, String(sandboxRoot)))
-          : sandboxRoot,
-        allowedHosts: (allowedHosts as string[] | undefined) ?? [],
-        maxReadBytes: maxReadBytes as number | undefined,
-        maxHttpBytes: maxHttpBytes as number | undefined,
-        maxDownloadBytes: maxDownloadBytes as number | undefined,
-        blockedCidrs: blockedCidrs as string[] | undefined,
-        defaultTimeoutMs: defaultTimeoutMs as number | undefined,
-        httpUserAgent: httpUserAgent as string | undefined,
-        enableAutoWriteLargeResponses: enableAutoWriteLargeResponses as boolean | undefined,
-      }
-    : undefined;
+  return {
+    sandboxRoot: sandboxRoot
+      ? path.isAbsolute(String(sandboxRoot))
+        ? String(sandboxRoot)
+        : path.resolve(configDir, String(sandboxRoot))
+      : sandboxRoot,
+    allowedHosts: (allowedHosts as string[] | undefined) ?? [],
+    maxReadBytes: maxReadBytes as number | undefined,
+    maxHttpBytes: maxHttpBytes as number | undefined,
+    maxDownloadBytes: maxDownloadBytes as number | undefined,
+    blockedCidrs: blockedCidrs as string[] | undefined,
+    defaultTimeoutMs: defaultTimeoutMs as number | undefined,
+    httpUserAgent: httpUserAgent as string | undefined,
+    enableAutoWriteLargeResponses: enableAutoWriteLargeResponses as boolean | undefined,
+  };
+}
 
+function extractAdapterConfigs(adapters: Record<string, any>): {
+  langchain: ToolHubInitOptions["langchain"];
+  mcp: ToolHubInitOptions["mcp"];
+  n8nMode: "local" | "api" | undefined;
+  n8nLocal: ToolHubInitOptions["n8nLocal"];
+  n8n: ToolHubInitOptions["n8n"];
+  comfyui: ToolHubInitOptions["comfyui"];
+  skill: ToolHubInitOptions["skill"];
+} {
   const comfyuiRaw = (adapters.comfyui ?? {}) as Record<string, any>;
   const comfyuiConfig =
     Object.keys(comfyuiRaw).length > 0
@@ -120,6 +116,48 @@ export function mapToolHubConfig(
   const n8nApi = (n8nRaw.api as Record<string, any> | undefined) ?? undefined;
 
   return {
+    langchain: adapters.langchain as ToolHubInitOptions["langchain"],
+    mcp: adapters.mcp as ToolHubInitOptions["mcp"],
+    n8nMode,
+    n8nLocal: n8nMode === "local" ? (n8nLocal as ToolHubInitOptions["n8nLocal"]) : undefined,
+    n8n: n8nMode === "api" ? (n8nApi as ToolHubInitOptions["n8n"]) : undefined,
+    comfyui: comfyuiConfig as ToolHubInitOptions["comfyui"],
+    skill: adapters.skill as ToolHubInitOptions["skill"],
+  };
+}
+
+export function mapToolHubConfig(
+  raw: unknown,
+  configDir: string,
+): ToolHubInitOptions {
+  const config = (raw ?? {}) as Record<string, any>;
+  const toolHub = (config.toolHub ?? {}) as Record<string, any>;
+  const discovery = (config.discovery ?? toolHub.discovery ?? {}) as Record<string, any>;
+  const system = (config.system ?? {}) as Record<string, any>;
+  const security = (config.security ?? {}) as Record<string, any>;
+  const runtime = system.runtime ?? config.runtime ?? {};
+  const coreToolsRaw =
+    (system.coreTools ?? config.coreTools ?? {}) as Record<string, any>;
+  const adapters = (config.adapters ?? {}) as Record<string, any>;
+
+  const rootsRaw = (discovery.roots ?? toolHub.roots ?? []) as Array<
+    | string
+    | { path: string; namespace?: string; config?: CoreToolsUserConfig }
+  >;
+  const { roots, coreToolsInlineConfig } = resolveRoots(rootsRaw, configDir);
+
+  const coreTools = (coreToolsInlineConfig ?? coreToolsRaw ?? {}) as Record<string, any>;
+  const includeCoreTools = roots.some((root) => {
+    if (typeof root === "string") return root === "coreTools";
+    return root.path === "coreTools";
+  });
+  const coreToolsConfig = includeCoreTools
+    ? extractCoreToolsConfig(coreTools, security, system, configDir)
+    : undefined;
+
+  const adapterConfigs = extractAdapterConfigs(adapters);
+
+  return {
     roots,
     namespace: (config.namespace as string | undefined) ?? (toolHub.namespace as string | undefined),
     extensions:
@@ -136,13 +174,7 @@ export function mapToolHubConfig(
       (discovery.watch as ToolHubInitOptions["watch"]) ??
       (config.watch as ToolHubInitOptions["watch"]) ??
       (toolHub.watch as ToolHubInitOptions["watch"]),
-    langchain: adapters.langchain as ToolHubInitOptions["langchain"],
-    mcp: adapters.mcp as ToolHubInitOptions["mcp"],
-    n8nMode,
-    n8nLocal: n8nMode === "local" ? (n8nLocal as ToolHubInitOptions["n8nLocal"]) : undefined,
-    n8n: n8nMode === "api" ? (n8nApi as ToolHubInitOptions["n8n"]) : undefined,
-    comfyui: comfyuiConfig as ToolHubInitOptions["comfyui"],
-    skill: adapters.skill as ToolHubInitOptions["skill"],
+    ...adapterConfigs,
   };
 }
 

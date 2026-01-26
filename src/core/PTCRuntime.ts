@@ -1,26 +1,34 @@
-import pTimeout from "p-timeout";
 import type { ToolAdapter, ToolSpec } from "../types/ToolSpec.js";
 import type { ExecContext, ToolIntent } from "../types/ToolIntent.js";
-import type { Evidence, ToolResult } from "../types/ToolResult.js";
-import type {
-  ToolCalledEvent,
-  ToolResultEvent,
-  PolicyDeniedEvent,
-  RetryEvent,
-} from "../types/Events.js";
+import type { ToolResult } from "../types/ToolResult.js";
 import { ToolRegistry } from "../registry/ToolRegistry.js";
-import { SchemaValidator, SchemaValidationError } from "./SchemaValidator.js";
-import { PolicyEngine, PolicyDeniedError } from "./PolicyEngine.js";
+import { SchemaValidator } from "./SchemaValidator.js";
+import { PolicyEngine } from "./PolicyEngine.js";
 import { BudgetManager } from "./Budget.js";
-import { withRetry, createTaggedError } from "./Retry.js";
 import { buildEvidence } from "./Evidence.js";
 import { EventLog } from "../observability/EventLog.js";
-import { createLogger, sanitizeForLog, summarizeForLog } from "../observability/Logger.js";
+import { createLogger, summarizeForLog, sanitizeForLog } from "../observability/Logger.js";
 import type { DebugOptions, Logger } from "../observability/Logger.js";
 import { Metrics } from "../observability/Metrics.js";
 import { Tracing } from "../observability/Tracing.js";
 import type { PolicyConfig } from "./PolicyEngine.js";
 import type { BudgetOptions } from "./Budget.js";
+import { createTaggedError } from "./Retry.js";
+import {
+  resolveTool,
+  validateInput,
+  enrichDefaults,
+  enforcePolicy,
+  executeWithBudget,
+  validateOutput,
+  type PipelineDependencies,
+} from "./PTCRuntimePipeline.js";
+import {
+  emitToolCalled,
+  recordSuccess,
+  handleError,
+  type ObservabilityDependencies,
+} from "./PTCRuntimeObservability.js";
 
 /**
  * PTC Runtime configuration.
@@ -166,11 +174,11 @@ export class PTCRuntime {
     });
 
     // Emit TOOL_CALLED event
-    this.emitToolCalled(intent, ctx);
+    emitToolCalled(intent, ctx, this.getObservabilityDeps());
 
     try {
       // Step 1: Resolve
-      const spec = this.resolve(intent.tool);
+      const spec = resolveTool(intent.tool, this.registry);
 
       this.tracing.addEvent(span.spanId, "resolved", {
         kind: spec.kind,
@@ -178,13 +186,18 @@ export class PTCRuntime {
       });
 
       // Step 2: Input Validate
-      const validatedArgs = this.validateInput(spec, intent.args);
+      const validatedArgs = validateInput(spec, intent.args, this.validator);
 
       // Step 3: Defaults Enrich
-      const enrichedArgs = this.enrichDefaults(spec, validatedArgs);
+      const enrichedArgs = enrichDefaults(spec, validatedArgs, this.validator);
 
       // Step 4: Policy Gate
-      this.enforcePolicy(spec, enrichedArgs, ctx);
+      enforcePolicy(spec, enrichedArgs, ctx, {
+        policy: this.policy,
+        eventLog: this.eventLog,
+        metrics: this.metrics,
+        tracing: this.tracing,
+      });
 
       // Step 5: Budget check
       if (!this.budget.checkRateLimit(spec.name)) {
@@ -200,15 +213,16 @@ export class PTCRuntime {
       }
 
       // Step 6: Execute with budget (timeout + retry + circuit breaker)
-      const { result, raw } = await this.executeWithBudget(
+      const { result, raw } = await executeWithBudget(
         spec,
         enrichedArgs,
         ctx,
         span.spanId,
+        this.getPipelineDeps(),
       );
 
       // Step 7: Output Validate
-      const validatedOutput = this.validateOutput(spec, result);
+      const validatedOutput = validateOutput(spec, result, this.validator);
 
       // Step 8: Evidence Build
       const durationMs = Date.now() - startTime;
@@ -222,7 +236,7 @@ export class PTCRuntime {
       });
 
       // Step 9: Audit & Metrics
-      this.recordSuccess(spec, durationMs, evidence, span.spanId);
+      recordSuccess(spec, durationMs, evidence, span.spanId, this.getObservabilityDeps());
 
       if (this.logger.isEnabled("debug")) {
         this.logger.debug("invoke.ok", {
@@ -245,7 +259,7 @@ export class PTCRuntime {
       };
     } catch (error) {
       const durationMs = Date.now() - startTime;
-      return this.handleError(error, intent, ctx, durationMs, span.spanId);
+      return handleError(error, intent, ctx, durationMs, span.spanId, this.getObservabilityDeps());
     }
   }
 
@@ -273,157 +287,30 @@ export class PTCRuntime {
     return { input: spec.inputSchema, output: spec.outputSchema };
   }
 
-  // --- Pipeline Steps ---
+  // --- Helper Methods ---
 
-  private resolve(toolName: string): ToolSpec {
-    const spec = this.registry.get(toolName);
-    if (!spec) {
-      throw createTaggedError(
-        "TOOL_NOT_FOUND",
-        `Tool not found: ${toolName}`,
-        { availableTools: this.registry.list().slice(0, 20) },
-      );
-    }
-    return spec;
-  }
-
-  private validateInput(spec: ToolSpec, args: unknown): unknown {
-    try {
-      return this.validator.validateOrThrow(
-        spec.inputSchema,
-        args,
-        `Input validation failed for ${spec.name}`,
-      );
-    } catch (error) {
-      if (error instanceof SchemaValidationError) {
-        throw createTaggedError("INPUT_SCHEMA_INVALID", error.message, {
-          errors: error.errors,
-          schema: spec.inputSchema,
-        });
-      }
-      throw error;
-    }
-  }
-
-  private enrichDefaults(spec: ToolSpec, args: unknown): unknown {
-    return this.validator.enrichDefaults(spec.inputSchema, args);
-  }
-
-  private enforcePolicy(spec: ToolSpec, args: unknown, ctx: ExecContext): void {
-    try {
-      this.policy.enforce(spec, args, ctx);
-    } catch (error) {
-      if (error instanceof PolicyDeniedError) {
-        // Emit policy denied event
-        const event: PolicyDeniedEvent = {
-          type: "POLICY_DENIED",
-          timestamp: new Date().toISOString(),
-          requestId: ctx.requestId,
-          taskId: ctx.taskId,
-          toolName: spec.name,
-          traceId: ctx.traceId,
-          userId: ctx.userId,
-          reason: error.message,
-          missingCapabilities: error.missingCapabilities?.map(String),
-        };
-        this.eventLog.append(event);
-        this.metrics.recordPolicyDenied(spec.name, error.message);
-      }
-      throw error;
-    }
-  }
-
-  private async executeWithBudget(
-    spec: ToolSpec,
-    args: unknown,
-    ctx: ExecContext,
-    spanId: string,
-  ): Promise<{ result: unknown; raw?: unknown }> {
-    const adapter = this.adapters.get(spec.kind);
-    if (!adapter) {
-      throw createTaggedError(
-        "TOOL_NOT_FOUND",
-        `No adapter registered for kind: ${spec.kind}`,
-      );
-    }
-
-    const timeoutMs = this.budget.getTimeout(
-      spec.name,
-      ctx.budget?.timeoutMs,
-    );
-    const maxRetries = ctx.budget?.maxRetries ?? this.config.defaultMaxRetries ?? 2;
-
-    const executeFn = async () => {
-      return this.budget.execute(spec.name, async () => {
-        this.tracing.addEvent(spanId, "execute_start");
-        this.logger.trace("execute.start", {
-          tool: spec.name,
-          requestId: ctx.requestId,
-          timeoutMs,
-          maxRetries,
-        });
-        const result = await adapter.invoke(spec, args, ctx);
-        this.tracing.addEvent(spanId, "execute_end");
-        this.logger.trace("execute.end", {
-          tool: spec.name,
-          requestId: ctx.requestId,
-        });
-        return result;
-      });
+  private getPipelineDeps(): PipelineDependencies {
+    return {
+      registry: this.registry,
+      adapters: this.adapters,
+      validator: this.validator,
+      policy: this.policy,
+      budget: this.budget,
+      eventLog: this.eventLog,
+      metrics: this.metrics,
+      tracing: this.tracing,
+      logger: this.logger,
+      defaultMaxRetries: this.config.defaultMaxRetries,
     };
-
-    // Wrap with retry
-    const retryFn = () =>
-      withRetry(executeFn, {
-        maxRetries,
-        onRetry: (error, attempt) => {
-          this.metrics.recordRetry(spec.name);
-          const event: RetryEvent = {
-            type: "RETRY",
-            timestamp: new Date().toISOString(),
-            requestId: ctx.requestId,
-            taskId: ctx.taskId,
-            toolName: spec.name,
-            traceId: ctx.traceId,
-            userId: ctx.userId,
-            attempt,
-            maxRetries,
-            reason: error.message,
-          };
-          this.eventLog.append(event);
-          this.tracing.addEvent(spanId, "retry", { attempt, reason: error.message });
-        },
-      });
-
-    // Wrap with timeout
-    try {
-      return await pTimeout(retryFn(), {
-        milliseconds: timeoutMs,
-        message: `Tool ${spec.name} timed out after ${timeoutMs}ms`,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("timed out")) {
-        throw createTaggedError("TIMEOUT", error.message);
-      }
-      throw error;
-    }
   }
 
-  private validateOutput(spec: ToolSpec, result: unknown): unknown {
-    try {
-      return this.validator.validateOrThrow(
-        spec.outputSchema,
-        result,
-        `Output validation failed for ${spec.name}`,
-      );
-    } catch (error) {
-      if (error instanceof SchemaValidationError) {
-        throw createTaggedError("OUTPUT_SCHEMA_INVALID", error.message, {
-          errors: error.errors,
-        });
-      }
-      throw error;
-    }
+  private getObservabilityDeps(): ObservabilityDependencies {
+    return {
+      eventLog: this.eventLog,
+      metrics: this.metrics,
+      tracing: this.tracing,
+      logger: this.logger,
+    };
   }
 
   private buildDryRunResult(
@@ -456,98 +343,4 @@ export class PTCRuntime {
     };
   }
 
-  // --- Observability Helpers ---
-
-  private emitToolCalled(intent: ToolIntent, ctx: ExecContext): void {
-    const event: ToolCalledEvent = {
-      type: "TOOL_CALLED",
-      timestamp: new Date().toISOString(),
-      requestId: ctx.requestId,
-      taskId: ctx.taskId,
-      toolName: intent.tool,
-      traceId: ctx.traceId,
-      userId: ctx.userId,
-      argsSummary: this.sanitizeArgs(intent.args),
-      purpose: intent.purpose,
-      idempotencyKey: intent.idempotencyKey,
-    };
-    this.eventLog.append(event);
-  }
-
-  private recordSuccess(
-    spec: ToolSpec,
-    durationMs: number,
-    evidence: Evidence[],
-    spanId: string,
-  ): void {
-    this.metrics.recordInvocation(spec.name, true, durationMs);
-    this.tracing.setAttributes(spanId, {
-      "tool.duration_ms": durationMs,
-      "tool.ok": true,
-    });
-    this.tracing.endSpan(spanId, "ok");
-  }
-
-  private handleError(
-    error: unknown,
-    intent: ToolIntent,
-    ctx: ExecContext,
-    durationMs: number,
-    spanId: string,
-  ): ToolResult {
-    const kind = (error as any)?.kind ?? "UPSTREAM_ERROR";
-    const message =
-      error instanceof Error ? error.message : String(error);
-    const details = (error as any)?.details;
-
-    // Metrics & tracing
-    this.metrics.recordInvocation(intent.tool, false, durationMs);
-    this.tracing.setAttributes(spanId, {
-      "tool.duration_ms": durationMs,
-      "tool.ok": false,
-      "tool.error_kind": kind,
-    });
-    this.tracing.endSpan(spanId, "error");
-
-    // Event log
-    const event: ToolResultEvent = {
-      type: "TOOL_RESULT",
-      timestamp: new Date().toISOString(),
-      requestId: ctx.requestId,
-      taskId: ctx.taskId,
-      toolName: intent.tool,
-      traceId: ctx.traceId,
-      userId: ctx.userId,
-      ok: false,
-      durationMs,
-      resultSummary: message,
-      evidence: [],
-      error: { kind, message, details },
-    };
-    this.eventLog.append(event);
-
-    this.logger.warn("invoke.error", {
-      tool: intent.tool,
-      requestId: ctx.requestId,
-      taskId: ctx.taskId,
-      traceId: ctx.traceId,
-      kind,
-      message,
-      durationMs,
-      details: this.logger.options.includeResults
-        ? summarizeForLog(details)
-        : undefined,
-    });
-
-    return {
-      ok: false,
-      evidence: [],
-      error: { kind, message, details },
-    };
-  }
-
-  private sanitizeArgs(args: unknown): string {
-    if (!args) return "{}";
-    return sanitizeForLog(args);
-  }
 }

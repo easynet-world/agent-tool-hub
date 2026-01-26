@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { watch, type FSWatcher } from "node:fs";
+import type { FSWatcher } from "node:fs";
 import type { Capability, ToolSpec } from "../types/ToolSpec.js";
 import type { ExecContext, ToolIntent, BudgetConfig } from "../types/ToolIntent.js";
 import type { ToolResult } from "../types/ToolResult.js";
@@ -27,6 +27,9 @@ import { N8nAdapter } from "../adapters/N8nAdapter.js";
 import { ComfyUIAdapter } from "../adapters/ComfyUIAdapter.js";
 import { SkillAdapter } from "../adapters/SkillAdapter.js";
 import { registerCoreTools } from "../core-tools/CoreToolsModule.js";
+import { initAllTools, refreshTools, splitRoots } from "./ToolHubDiscovery.js";
+import { watchRoots, unwatchRoots } from "./ToolHubWatcher.js";
+import { rootPath, rootKey } from "./ToolHubHelpers.js";
 
 export interface ToolMetadata {
   name: string;
@@ -128,7 +131,7 @@ export class ToolHub {
       config: runtimeConfig,
     });
 
-    const { scannerRoots, includeCoreTools, coreToolsConfig } = this.splitRoots(
+    const { scannerRoots, includeCoreTools, coreToolsConfig } = splitRoots(
       options.roots,
       options.includeCoreTools,
     );
@@ -188,27 +191,23 @@ export class ToolHub {
    * Initialize all tools by scanning the configured roots.
    */
   async initAllTools(): Promise<ToolSpec[]> {
-    this.logger.info("init.tools.start", {
-      roots: this.scannerOptions.roots,
-    });
-    const specs = await this.scanner.scan();
-    this.registry.bulkRegister(specs);
     if (this.n8nMode === "local") {
       await this.ensureN8nLocalAdapter();
     }
-    if (this.n8nLocalAdapter) {
-      await this.n8nLocalAdapter.start();
-      await this.n8nLocalAdapter.syncWorkflows(
-        specs.filter((spec) => spec.kind === "n8n"),
-      );
-    }
+    const specs = await initAllTools(this.scanner, {
+      registry: this.registry,
+      logger: this.logger,
+      includeCoreTools: this.includeCoreTools,
+      coreToolsConfig: this.coreToolsConfig,
+      roots: this.scannerOptions.roots,
+    }, this.n8nLocalAdapter);
+    
     if (this.watchConfig?.enabled) {
       this.watchRoots({
         debounceMs: this.watchConfig.debounceMs,
         persistent: this.watchConfig.persistent,
       });
     }
-    this.logger.info("init.tools.done", { count: specs.length });
     return specs;
   }
 
@@ -216,11 +215,6 @@ export class ToolHub {
    * Refresh tools by re-scanning current roots.
    */
   async refreshTools(): Promise<ToolSpec[]> {
-    this.logger.info("refresh.tools.start", {
-      roots: this.scannerOptions.roots,
-    });
-    const specs = await this.scanner.scan();
-    this.registry.clear();
     if (this.includeCoreTools) {
       if (!this.coreToolsConfig) {
         throw new Error("coreTools config is required when includeCoreTools is true");
@@ -228,17 +222,16 @@ export class ToolHub {
       const coreAdapter = registerCoreTools(this.registry, this.coreToolsConfig);
       this.runtime.registerAdapter(coreAdapter);
     }
-    this.registry.bulkRegister(specs);
     if (this.n8nMode === "local") {
       await this.ensureN8nLocalAdapter();
     }
-    if (this.n8nLocalAdapter) {
-      await this.n8nLocalAdapter.start();
-      await this.n8nLocalAdapter.syncWorkflows(
-        specs.filter((spec) => spec.kind === "n8n"),
-      );
-    }
-    this.logger.info("refresh.tools.done", { count: specs.length });
+    const specs = await refreshTools(this.scanner, {
+      registry: this.registry,
+      logger: this.logger,
+      includeCoreTools: this.includeCoreTools,
+      coreToolsConfig: this.coreToolsConfig,
+      roots: this.scannerOptions.roots,
+    }, this.n8nLocalAdapter);
     return specs;
   }
 
@@ -251,10 +244,10 @@ export class ToolHub {
   ): Promise<ToolSpec[] | void> {
     const merged = new Map<string, string | { path: string; namespace?: string }>();
     for (const root of this.scannerOptions.roots) {
-      merged.set(this.rootKey(root), root);
+      merged.set(rootKey(root), root);
     }
     for (const root of roots) {
-      merged.set(this.rootKey(root), root);
+      merged.set(rootKey(root), root);
     }
     this.scannerOptions.roots = Array.from(merged.values());
     this.scanner = new DirectoryScanner(this.scannerOptions);
@@ -283,53 +276,23 @@ export class ToolHub {
    * Watch all current roots and auto-refresh on changes.
    */
   watchRoots(options: { debounceMs?: number; persistent?: boolean } = {}): void {
-    const debounceMs = options.debounceMs ?? 200;
-    const persistent = options.persistent ?? true;
-
-    for (const root of this.scannerOptions.roots) {
-      const rootPath = this.rootPath(root);
-      if (this.watchers.has(rootPath)) {
-        continue;
-      }
-      this.logger.info("watch.start", { root: rootPath, debounceMs, persistent });
-      const watcher = watch(
-        rootPath,
-        { recursive: true, persistent },
-        () => {
-          const existing = this.watchTimers.get(rootPath);
-          if (existing) {
-            clearTimeout(existing);
-          }
-          const timer = setTimeout(() => {
-            this.refreshTools().catch((err) => {
-              this.logger.warn("watch.refresh.error", {
-                root: rootPath,
-                message: err instanceof Error ? err.message : String(err),
-              });
-              this.scannerOptions.onError?.(rootPath, err as Error);
-            });
-          }, debounceMs);
-          this.watchTimers.set(rootPath, timer);
-        },
-      );
-      this.watchers.set(rootPath, watcher);
-    }
+    watchRoots(
+      {
+        logger: this.logger,
+        scannerOptions: this.scannerOptions,
+        refreshTools: () => this.refreshTools(),
+      },
+      this.watchers,
+      this.watchTimers,
+      options,
+    );
   }
 
   /**
    * Stop watching all roots.
    */
   unwatchRoots(): void {
-    for (const [root, watcher] of this.watchers) {
-      watcher.close();
-      this.watchers.delete(root);
-      const timer = this.watchTimers.get(root);
-      if (timer) {
-        clearTimeout(timer);
-        this.watchTimers.delete(root);
-      }
-      this.logger.info("watch.stop", { root });
-    }
+    unwatchRoots(this.watchers, this.watchTimers, this.logger);
   }
 
   /**
@@ -456,53 +419,6 @@ export class ToolHub {
     return undefined;
   }
 
-  private splitRoots(
-    roots: ToolHubInitOptions["roots"],
-    includeCoreTools?: boolean,
-  ): {
-    scannerRoots: Array<string | { path: string; namespace?: string }>;
-    includeCoreTools: boolean;
-    coreToolsConfig?: CoreToolsUserConfig;
-  } {
-    const scannerRoots: Array<string | { path: string; namespace?: string }> = [];
-    let hasCoreTools = false;
-    let coreToolsConfig: CoreToolsUserConfig | undefined;
-
-    for (const root of roots) {
-      if (typeof root === "string") {
-        if (root === "coreTools") {
-          hasCoreTools = true;
-        } else {
-          scannerRoots.push(root);
-        }
-        continue;
-      }
-      if (root.path === "coreTools") {
-        hasCoreTools = true;
-        if ("config" in root && root.config) {
-          coreToolsConfig = root.config;
-        }
-        continue;
-      }
-      scannerRoots.push(root);
-    }
-
-    return {
-      scannerRoots,
-      includeCoreTools: includeCoreTools ?? hasCoreTools,
-      coreToolsConfig,
-    };
-  }
-
-  private rootPath(root: string | { path: string; namespace?: string }): string {
-    return typeof root === "string" ? root : root.path;
-  }
-
-  private rootKey(root: string | { path: string; namespace?: string }): string {
-    const path = this.rootPath(root);
-    const namespace = typeof root === "string" ? "" : root.namespace ?? "";
-    return `${path}::${namespace}`;
-  }
 }
 
 export function createToolHub(options: ToolHubInitOptions): ToolHub {
