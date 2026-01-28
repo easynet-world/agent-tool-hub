@@ -1,34 +1,41 @@
-import { describe, it, expect } from "vitest";
-import { spawn } from "node:child_process";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { run } from "../src/cli.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(__dirname, "..");
-const cliPath = path.join(projectRoot, "dist", "cli.js");
 const fixtureConfig = path.join(__dirname, "fixtures", "cli-toolhub.yaml");
 
-function runCli(args: string[]): Promise<{ stdout: string; stderr: string; code: number | null }> {
-  return new Promise((resolve) => {
-    const proc = spawn(process.execPath, [cliPath, ...args], {
-      cwd: projectRoot,
-      env: { ...process.env },
-    });
-    let stdout = "";
-    let stderr = "";
-    proc.stdout?.on("data", (chunk) => {
-      stdout += chunk;
-    });
-    proc.stderr?.on("data", (chunk) => {
-      stderr += chunk;
-    });
-    proc.on("close", (code) => {
-      resolve({ stdout, stderr, code: code ?? null });
-    });
+/** Run CLI programmatically (no dist/cli.js needed). Captures stdout/stderr. */
+async function runCli(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
+  const stdoutChunks: string[] = [];
+  const stderrChunks: string[] = [];
+  const stdoutWrite = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    stdoutChunks.push(String(chunk));
+    return true;
   });
+  const stderrWrite = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    stderrChunks.push(String(chunk));
+    return true;
+  });
+  try {
+    const code = await run(["node", "cli", ...args]);
+    return {
+      stdout: stdoutChunks.join(""),
+      stderr: stderrChunks.join(""),
+      code,
+    };
+  } finally {
+    stdoutWrite.mockRestore();
+    stderrWrite.mockRestore();
+  }
 }
 
 describe("agent-tool-hub CLI", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("prints help with --help", async () => {
     const { stdout, stderr, code } = await runCli(["--help"]);
     expect(code).toBe(0);
