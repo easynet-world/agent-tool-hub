@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Build script for agent-tool-hub
+# Build script for @easynet/agent-tool-hub
 # This script builds the package and creates a zip file for distribution
 
 set -e  # Exit on error
