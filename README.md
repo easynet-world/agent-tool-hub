@@ -1,6 +1,6 @@
-# agent-tool-hub Tools
+# Agent Tool Hub
 
-agent-tool-hub is a multi-protocol tool registry + PTC runtime that unifies discovery, governance, and execution for tools across MCP, LangChain, n8n, SKILL, and built-in core tools.
+Agent Tool Hub is a multi-protocol tool registry + PTC runtime that unifies discovery, governance, and execution for tools across MCP, LangChain, n8n, SKILL, and built-in core tools.
 
 ## What We Support
 
@@ -36,7 +36,7 @@ npm i agent-tool-hub
 
 ### Configure via `toolhub.yaml`
 
-agent-tool-hub is configured by a YAML file. Keep it simple:
+Agent Tool Hub is configured by a YAML file. Keep it simple:
 
 ```yaml
 discovery:
@@ -59,7 +59,7 @@ adapters:
       apiKey: ""
 ```
 
-Your framework can load this config and initialize agent-tool-hub accordingly.
+Your framework can load this config and initialize Agent Tool Hub accordingly.
 
 ### Initialize from a config file path
 
@@ -208,3 +208,9 @@ Common capabilities:
 - `danger:destructive`
 
 Pass `permissions` when invoking tools to satisfy policy gates.
+
+## Publishing (maintainers)
+
+Releases are automated via GitHub Actions (`.github/workflows/release.yml`). On push to `master`, tests and build run, then [semantic-release](https://github.com/semantic-release/semantic-release) publishes to npm (patch-only).
+
+**Required:** Add `NPM_TOKEN` in the repo’s **Settings → Secrets and variables → Actions**. The token must be a [granular access token](https://docs.npmjs.com/creating-and-viewing-access-tokens) with **“bypass 2fa”** (or an automation token) so CI can publish; otherwise npm returns 403.

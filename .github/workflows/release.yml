@@ -1,3 +1,7 @@
+# Release: runs tests, builds, then publishes to npm via semantic-release (patch-only).
+# Required: add NPM_TOKEN in Settings > Secrets and variables > Actions.
+# Token must be a granular access token with "bypass 2fa" (or automation token) for publishing.
+# See https://docs.npmjs.com/creating-and-viewing-access-tokens
 name: Release
 
 on:
@@ -24,6 +28,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Ensure on branch master for semantic-release
+        run: |
+          git fetch origin master
+          git checkout -B master origin/master
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -38,6 +47,15 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Check NPM_TOKEN for publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "::error::NPM_TOKEN secret is not set. Add it in Settings > Secrets and variables > Actions (name: NPM_TOKEN) to publish to npm. See https://docs.npmjs.com/creating-and-viewing-access-tokens"
+            exit 1
+          fi
 
       - name: Release
         env:
