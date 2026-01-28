@@ -6,6 +6,7 @@
  */
 
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
 import { loadToolHubConfig } from "./config/ToolHubConfig.js";
 import { createToolHub } from "./tool-hub/ToolHub.js";
@@ -177,8 +178,8 @@ async function cmdList(configPath: string, detail: DetailLevel): Promise<number>
   return 0;
 }
 
-async function main(): Promise<number> {
-  const { command, configPath, detail, help } = parseArgv(process.argv);
+async function main(argv: string[] = process.argv): Promise<number> {
+  const { command, configPath, detail, help } = parseArgv(argv);
 
   if (help || command === "help") {
     printHelp();
@@ -204,9 +205,21 @@ async function main(): Promise<number> {
   }
 }
 
-main()
-  .then((code) => process.exit(code))
-  .catch((err) => {
-    process.stderr.write(String(err?.message ?? err) + "\n");
-    process.exit(1);
-  });
+/** Run CLI with the given argv (same shape as process.argv). Exported for tests. */
+export async function run(argv: string[]): Promise<number> {
+  return main(argv);
+}
+
+const isMain =
+  typeof process !== "undefined" &&
+  process.argv[1] !== undefined &&
+  process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isMain) {
+  main()
+    .then((code) => process.exit(code))
+    .catch((err) => {
+      process.stderr.write(String(err?.message ?? err) + "\n");
+      process.exit(1);
+    });
+}
