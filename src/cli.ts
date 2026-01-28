@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CLI for agent-tool-hub: scan tools folders, verify tools, list tools.
+ * CLI for @easynet/agent-tool-hub: scan tools folders, verify tools, list tools.
  * Usage: agent-tool-hub <command> [options]
  * Commands: scan | verify | list
  */

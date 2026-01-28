@@ -94,7 +94,7 @@ Drop an n8n workflow JSON. Put under `n8n/`; the hub runs it (local or via API):
 ## Install
 
 ```bash
-npm install agent-tool-hub
+npm install @easynet/agent-tool-hub
 ```
 
 Node 18+ required.
@@ -118,7 +118,7 @@ npx agent-tool-hub list    # list discovered tools
 Load from config, init, then invoke:
 
 ```ts
-import { createToolHubAndInitFromConfig } from "agent-tool-hub";
+import { createToolHubAndInitFromConfig } from "@easynet/agent-tool-hub";
 
 const hub = await createToolHubAndInitFromConfig("toolhub.yaml");
 const result = await hub.invokeTool("utils.calculator", { expression: "1 + 2" });

@@ -31,7 +31,7 @@ async function runCli(args: string[]): Promise<{ stdout: string; stderr: string;
   }
 }
 
-describe("agent-tool-hub CLI", () => {
+describe("@easynet/agent-tool-hub CLI", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
