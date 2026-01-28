@@ -34,6 +34,20 @@ npm i agent-tool-hub
 - Node >= 18
 - Optional peers: `@langchain/core`, `@modelcontextprotocol/sdk`
 
+After install, the `agent-tool-hub` CLI is available (or run via `npx agent-tool-hub`):
+
+```bash
+agent-tool-hub <command> [options]
+```
+
+| Command | Description |
+| --- | --- |
+| `scan` | Scan configured tool roots and load tools into the hub. |
+| `verify` | Scan and verify tools; exit code 1 if any discovery errors. |
+| `list` | List discovered tools. Use `--detail short \| normal \| full` for output level. |
+
+Options: `--config, -c <path>` (default: `./toolhub.yaml`), `--detail, -d <level>` (for `list`), `--help, -h`.
+
 ### Configure via `toolhub.yaml`
 
 Agent Tool Hub is configured by a YAML file. Keep it simple:

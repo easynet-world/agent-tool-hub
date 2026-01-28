@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/toolhub-runtime.ts"],
+  entry: ["src/index.ts", "src/toolhub-runtime.ts", "src/cli.ts"],
   format: ["esm", "cjs"],
   dts: true,
   splitting: true,
