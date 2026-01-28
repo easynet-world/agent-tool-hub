@@ -2,6 +2,95 @@
 
 **One registry, many protocols** — discover and run tools from MCP, LangChain, n8n, ComfyUI, and SKILL through a single PTC runtime.
 
+Define tools with simple, familiar formats: drop a folder under a configured root and use the protocol you like. One tool can be exposed in multiple protocols in the same folder.
+
+---
+
+### SKILL
+
+Markdown spec + JS handler. Put under `skill/`:
+
+```yaml
+# skill/SKILL.md
+---
+name: my-tool
+description: What your tool does.
+---
+```
+
+```js
+// skill/handler.js
+async function handler(args) {
+  const { x, y } = args ?? {};
+  return { result: { sum: Number(x) + Number(y) } };
+}
+export default handler;
+```
+
+---
+
+### LangChain
+
+Export a LangChain tool (e.g. `StructuredTool`). Put under `langchain/`:
+
+```js
+// langchain/calculator.js
+import { StructuredTool } from "@langchain/core/tools";
+import { z } from "zod";
+
+class CalculatorTool extends StructuredTool {
+  name = "calculator";
+  description = "Evaluates arithmetic expressions";
+  schema = z.object({ expression: z.string() });
+  async _call({ expression }) {
+    return String(Function(`"use strict"; return (${expression})`)());
+  }
+}
+export default new CalculatorTool();
+```
+
+---
+
+### MCP
+
+Declare MCP server in JSON. Put under `mcp/`; the server process is started by the hub:
+
+```json
+// mcp/mcp.json
+{
+  "mcpServers": {
+    "calculator": {
+      "command": "node",
+      "args": ["./server.js"]
+    }
+  }
+}
+```
+
+---
+
+### n8n
+
+Drop an n8n workflow JSON. Put under `n8n/`; the hub runs it (local or via API):
+
+```json
+// n8n/workflow.json
+{
+  "name": "My Workflow",
+  "nodes": [
+    {
+      "id": "webhook",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": { "path": "my-tool", "httpMethod": "POST" }
+    }
+  ],
+  "connections": {}
+}
+```
+
+---
+
+
 ## Install
 
 ```bash
@@ -10,9 +99,13 @@ npm install agent-tool-hub
 
 Node 18+ required.
 
+---
+
 ## Use
 
-**CLI** — add a `toolhub.yaml` in your project, then:
+### CLI
+
+Add a `toolhub.yaml` in your project, then:
 
 ```bash
 npx agent-tool-hub scan    # load tools from configured roots
@@ -20,7 +113,9 @@ npx agent-tool-hub verify  # scan and exit 1 on errors
 npx agent-tool-hub list    # list discovered tools
 ```
 
-**In code** — load from config, init, then invoke:
+### In code
+
+Load from config, init, then invoke:
 
 ```ts
 import { createToolHubAndInitFromConfig } from "agent-tool-hub";
@@ -32,4 +127,6 @@ const result = await hub.invokeTool("utils.calculator", { expression: "1 + 2" })
 
 Or build the hub yourself: `createToolHub(options)` → `await hub.initAllTools()`; run tools with `hub.invokeTool(name, args, options)`.
 
-See `toolhub.yaml` for config and `examples/` for tool layouts.
+---
+
+See `toolhub.yaml` for config and `examples/` for full tool layouts.
