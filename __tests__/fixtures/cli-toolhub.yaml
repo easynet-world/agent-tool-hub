@@ -1,0 +1,27 @@
+# Minimal config for CLI tests: n8n api mode, one existing root.
+discovery:
+  roots:
+    - path: coreTools
+      namespace: core
+    - path: ../../examples/groups/utils
+      namespace: utils
+
+debug:
+  enabled: false
+  level: info
+
+security:
+  sandbox:
+    root: /tmp/toolhub-sandbox
+  network:
+    allowedHosts: []
+
+adapters:
+  n8n:
+    mode: api
+    api:
+      apiBaseUrl: http://localhost:5678
+  mcp: {}
+  langchain: {}
+  comfyui: {}
+  skill: {}
