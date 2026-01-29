@@ -119,7 +119,9 @@ function buildSummary(tools) {
 }
 
 async function main() {
-  const configPath = path.resolve(process.cwd(), "toolhub.yaml");
+  const defaultPath = path.resolve(process.cwd(), "toolhub.yaml");
+  const examplePath = path.resolve(process.cwd(), "toolhub.example.yaml");
+  const configPath = await fs.access(defaultPath).then(() => defaultPath).catch(() => examplePath);
 
   const rawConfigText = await fs.readFile(configPath, "utf-8");
   const rawConfig = yaml.load(rawConfigText) ?? {};

@@ -1,3 +1,5 @@
 node_modules
 dist
 .DS_Store
+# Local config (copy from toolhub.example.yaml)
+toolhub.yaml

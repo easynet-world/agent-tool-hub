@@ -3,8 +3,8 @@ discovery:
   roots:
     - path: coreTools
       namespace: core
-    - path: ../../examples/groups/utils
-      namespace: utils
+    - path: ../../examples/tools
+      namespace: tools
 
 debug:
   enabled: false

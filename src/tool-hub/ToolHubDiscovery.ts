@@ -15,43 +15,49 @@ export interface DiscoveryDependencies {
 
 /**
  * Initialize all tools by scanning the configured roots.
+ * When preScannedSpecs is provided, uses it instead of scanning (avoids double scan).
+ * n8nLocalAdapter is only used when there are n8n specs (caller passes it only when needed).
  */
 export async function initAllTools(
   scanner: DirectoryScanner,
   deps: DiscoveryDependencies,
   n8nLocalAdapter?: { start(): Promise<void>; syncWorkflows(specs: ToolSpec[]): Promise<void> },
+  preScannedSpecs?: ToolSpec[],
 ): Promise<ToolSpec[]> {
   deps.logger.info("init.tools.start", {
     roots: deps.roots,
   });
-  const specs = await scanner.scan();
+  const specs = preScannedSpecs ?? (await scanner.scan());
   deps.registry.bulkRegister(specs);
-  
+
   if (n8nLocalAdapter) {
     await n8nLocalAdapter.start();
     await n8nLocalAdapter.syncWorkflows(
       specs.filter((spec) => spec.kind === "n8n"),
     );
   }
-  
+
   deps.logger.info("init.tools.done", { count: specs.length });
   return specs;
 }
 
 /**
  * Refresh tools by re-scanning current roots.
+ * When preScannedSpecs is provided, uses it instead of scanning (avoids double scan).
+ * n8nLocalAdapter is only used when there are n8n specs (caller passes it only when needed).
  */
 export async function refreshTools(
   scanner: DirectoryScanner,
   deps: DiscoveryDependencies,
   n8nLocalAdapter?: { start(): Promise<void>; syncWorkflows(specs: ToolSpec[]): Promise<void> },
+  preScannedSpecs?: ToolSpec[],
 ): Promise<ToolSpec[]> {
   deps.logger.info("refresh.tools.start", {
     roots: deps.roots,
   });
-  const specs = await scanner.scan();
+  const specs = preScannedSpecs ?? (await scanner.scan());
   deps.registry.clear();
-  
+
   if (deps.includeCoreTools) {
     if (!deps.coreToolsConfig) {
       throw new Error("coreTools config is required when includeCoreTools is true");
@@ -59,16 +65,16 @@ export async function refreshTools(
     // Note: coreAdapter registration should be handled by caller
     registerCoreTools(deps.registry, deps.coreToolsConfig);
   }
-  
+
   deps.registry.bulkRegister(specs);
-  
+
   if (n8nLocalAdapter) {
     await n8nLocalAdapter.start();
     await n8nLocalAdapter.syncWorkflows(
       specs.filter((spec) => spec.kind === "n8n"),
     );
   }
-  
+
   deps.logger.info("refresh.tools.done", { count: specs.length });
   return specs;
 }

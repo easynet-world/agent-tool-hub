@@ -86,4 +86,31 @@ describe("SchemaValidator", () => {
       expect(r2.valid).toBe(true);
     });
   });
+
+  describe("Zod-like / AJV compatibility", () => {
+    it("should normalize required to string[] (e.g. required: [0] from Zod)", () => {
+      const schemaWithNumericRequired = {
+        type: "object",
+        properties: { url: { type: "string" } },
+        required: [0],
+      } as unknown as { type: string; properties: object; required: unknown };
+      const result = validator.validate(schemaWithNumericRequired, { url: "https://example.com" });
+      // After normalization required becomes [] (non-strings filtered out), so url is not required
+      expect(result.valid).toBe(true);
+    });
+
+    it("should accept nullable when type is added (nullable without type)", () => {
+      const schemaNullableNoType = {
+        type: "object",
+        properties: {
+          url: { type: "string", description: "URL" },
+          maxLength: { type: "number", nullable: true, default: 50000 },
+        },
+        required: ["url"],
+      };
+      const result = validator.validate(schemaNullableNoType, { url: "https://example.com" });
+      expect(result.valid).toBe(true);
+      expect((result.data as Record<string, unknown>).maxLength).toBe(50000);
+    });
+  });
 });

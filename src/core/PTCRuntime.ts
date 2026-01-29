@@ -1,6 +1,6 @@
 import type { ToolAdapter, ToolSpec } from "../types/ToolSpec.js";
 import type { ExecContext, ToolIntent } from "../types/ToolIntent.js";
-import type { ToolResult } from "../types/ToolResult.js";
+import type { ToolResult, Evidence } from "../types/ToolResult.js";
 import { ToolRegistry } from "../registry/ToolRegistry.js";
 import { SchemaValidator } from "./SchemaValidator.js";
 import { PolicyEngine } from "./PolicyEngine.js";
@@ -117,6 +117,13 @@ export class PTCRuntime {
   }
 
   /**
+   * Get an adapter by kind (e.g. "mcp"). Use to set MCP client via adapter.setClient().
+   */
+  getAdapter(kind: string): ToolAdapter | undefined {
+    return this.adapters.get(kind);
+  }
+
+  /**
    * Get the tool registry.
    */
   getRegistry(): ToolRegistry {
@@ -224,9 +231,9 @@ export class PTCRuntime {
       // Step 7: Output Validate
       const validatedOutput = validateOutput(spec, result, this.validator);
 
-      // Step 8: Evidence Build
+      // Step 8: Evidence Build (merge adapter-provided evidence with built evidence)
       const durationMs = Date.now() - startTime;
-      const evidence = buildEvidence({
+      const builtEvidence = buildEvidence({
         spec,
         args: enrichedArgs,
         result: validatedOutput,
@@ -234,6 +241,13 @@ export class PTCRuntime {
         ctx,
         durationMs,
       });
+      const adapterEvidence: Evidence[] =
+        raw &&
+        typeof raw === "object" &&
+        Array.isArray((raw as { evidence?: Evidence[] }).evidence)
+          ? ((raw as { evidence: Evidence[] }).evidence as Evidence[])
+          : [];
+      const evidence = [...adapterEvidence, ...builtEvidence];
 
       // Step 9: Audit & Metrics
       recordSuccess(spec, durationMs, evidence, span.spanId, this.getObservabilityDeps());

@@ -55,6 +55,11 @@ export class N8nLocalAdapter implements ToolAdapter {
     return [];
   }
 
+  /**
+   * Invoke an n8n workflow locally.
+   * If the workflow returns { result, evidence? } (same as Skill/LangChain), the adapter
+   * uses result as the main result and passes evidence through raw for the runtime to merge.
+   */
   async invoke(
     spec: ToolSpec,
     args: unknown,
@@ -69,7 +74,18 @@ export class N8nLocalAdapter implements ToolAdapter {
     try {
       await this.ensureStarted();
       const workflowId = await this.ensureWorkflowImported(spec);
-      const result = await this.instance.runWorkflow(workflowId, args);
+      const raw = await this.instance.runWorkflow(workflowId, args);
+
+      // Support { result, evidence? } convention (same as Skill/LangChain) when evidence is present
+      const hasEvidence =
+        raw &&
+        typeof raw === "object" &&
+        "evidence" in raw &&
+        Array.isArray((raw as { evidence: unknown }).evidence);
+      const result =
+        hasEvidence && "result" in raw
+          ? (raw as { result: unknown }).result
+          : raw;
 
       if (this.logger.isEnabled("debug")) {
         this.logger.debug("invoke.ok", {
@@ -81,7 +97,7 @@ export class N8nLocalAdapter implements ToolAdapter {
         });
       }
 
-      return { result, raw: result };
+      return { result, raw };
     } catch (error) {
       this.logger.warn("invoke.error", {
         tool: spec.name,

@@ -409,9 +409,24 @@ export class DirectoryScanner {
         break;
       }
       case "n8n": {
-        const workflow = loaded.workflowDef as { id?: string } | undefined;
+        const workflow = loaded.workflowDef as {
+          id?: string;
+          name?: string;
+          description?: string;
+          meta?: { description?: string };
+        } | undefined;
         if (workflow?.id) {
           spec.resourceId = String(workflow.id);
+        }
+        // Use workflow name/description when manifest has no description (same pattern as LangChain)
+        if (!manifest.description && workflow) {
+          const workflowDesc =
+            workflow.description ??
+            workflow.meta?.description ??
+            (typeof workflow.name === "string" ? workflow.name : undefined);
+          if (workflowDesc) {
+            spec.description = workflowDesc;
+          }
         }
         spec.impl = loaded.workflowDef;
         break;

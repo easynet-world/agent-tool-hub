@@ -29,7 +29,7 @@ export interface CostHints {
 
 /**
  * Unified tool specification.
- * All tool types (MCP, LangChain, n8n, ComfyUI, SKILL) are described by this interface.
+ * All tool types (MCP, LangChain, n8n, SKILL) are described by this interface.
  */
 export interface ToolSpec {
   /** Globally unique name, recommended format: namespace/name */
@@ -51,7 +51,7 @@ export interface ToolSpec {
   capabilities: Capability[];
   costHints?: CostHints;
 
-  /** Adapter-specific: endpoint URL (MCP/n8n/ComfyUI) */
+  /** Adapter-specific: endpoint URL (MCP/n8n) */
   endpoint?: string;
   /** Adapter-specific: resource identifier (workflowId, promptId, etc.) */
   resourceId?: string;
@@ -61,7 +61,7 @@ export interface ToolSpec {
 
 /**
  * Unified adapter interface.
- * Each protocol adapter (MCP, LangChain, n8n, ComfyUI, SKILL) implements this.
+ * Each protocol adapter (MCP, LangChain, n8n, SKILL) implements this.
  */
 export interface ToolAdapter {
   kind: ToolKind;

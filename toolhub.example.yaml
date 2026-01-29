@@ -1,0 +1,114 @@
+# ToolHub config example
+# Copy to toolhub.yaml in your project and adjust paths/options.
+# - All paths can be absolute or relative to the config file's directory.
+# - This file can be mapped into createToolHub() options by your loader.
+
+toolHub:
+  discovery:
+    # Tool discovery and hot-reload settings.
+    hotReload:
+      # Enable filesystem watch to auto-refresh tools on changes.
+      enabled: false
+      # Debounce time for file change aggregation (ms).
+      debounceMs: 200
+      # Keep watchers alive even if there are no listeners.
+      persistent: true
+    # Tool roots to scan. Each root becomes a namespace prefix.
+    roots:
+      # Built-in core tools (requires core tools config elsewhere).
+      - path: coreTools
+        namespace: core
+      # Example tool groups (local dev only).
+      - path: ./examples/tools/web
+        namespace: tools
+      - path: ./examples/tools/utils
+        namespace: tools
+      - path: ./examples/tools/dev
+        namespace: tools
+      - path: ./examples/tools/notify
+        namespace: tools
+      - path: ./examples/extra-tools
+        namespace: extra
+      # Production/system tools directory.
+      - path: /opt/toolhub/tools
+        namespace: system
+
+  debug:
+    # Global debug config; adapters inherit unless overridden.
+    enabled: false
+    # Log level: trace | debug | info | warn | error
+    level: info
+    # Include args in logs (may contain sensitive data).
+    includeArgs: false
+    # Include parsed results in logs.
+    includeResults: false
+    # Include raw adapter responses in logs.
+    includeRaw: false
+    # Emit tool lifecycle events to logs.
+    logEvents: false
+
+  runtime:
+    # Runtime behavior and execution defaults.
+    # Include raw adapter responses in ToolResult.
+    includeRaw: true
+    # Default retry count when context doesn't specify.
+    defaultMaxRetries: 2
+
+  security:
+    # System-wide sandbox and network policy used by core tools.
+    sandbox:
+      # Absolute path that constrains filesystem tools.
+      root: /tmp/toolhub-sandbox
+    network:
+      # Allowlist for outbound HTTP tools.
+      allowedHosts:
+        - api.github.com
+        - "*.example.com"
+
+  adapters:
+    # n8n workflow adapter settings (local or API).
+    n8n:
+      # Execution mode: local | api
+      mode: local
+      # Local embedded n8n settings.
+      local:
+        # SQLite DB file for n8n-local.
+        sqliteDatabase: /tmp/toolhub-n8n.sqlite
+        # Data folder used for workflow sync/import.
+        dataFolder: /tmp/toolhub-n8n-data
+        # Start internal web UI (not needed for headless runs).
+        webInterfaceEnabled: false
+        # Auto-start n8n-local on first invoke.
+        autoStart: true
+      # API mode settings.
+      api:
+        # n8n base URL (API or webhook host).
+        apiBaseUrl: http://localhost:5678
+        # API key (leave empty for no auth).
+        apiKey: ""
+        # Default invocation mode: webhook | api
+        defaultMode: webhook
+        # If workflow exceeds this time (ms), treat as async.
+        asyncThresholdMs: 30000
+
+    # MCP adapter settings.
+    mcp:
+      # Optional server endpoint; can be overridden per tool.
+      endpoint: ""
+      # Optional tool name prefix for MCP discovery.
+      prefix: mcp
+
+    # LangChain adapter settings.
+    langchain:
+      # Inline tool registrations (if any).
+      tools: {}
+
+    comfyui:
+      apiBaseUrl: http://localhost:8188
+
+    # Skill adapter settings.
+    skill:
+      # Preloaded skill definitions (optional).
+      definitions: {}
+      # Custom handlers map (optional).
+      handlers: {}

@@ -1,6 +1,6 @@
 # Agent Tool Hub
 
-**One registry, many protocols** — discover and run tools from MCP, LangChain, n8n, ComfyUI, and SKILL through a single PTC runtime.
+**One registry, many protocols** — discover and run tools from MCP, LangChain, n8n, and SKILL through a single PTC runtime.
 
 Define tools with simple, familiar formats: drop a folder under a configured root and use the protocol you like. One tool can be exposed in multiple protocols in the same folder.
 
@@ -105,7 +105,7 @@ Node 18+ required.
 
 ### CLI
 
-Add a `toolhub.yaml` in your project, then:
+Copy `toolhub.example.yaml` to `toolhub.yaml` in your project (or use `-c path/to/config.yaml`), then:
 
 ```bash
 npx agent-tool-hub scan    # load tools from configured roots
@@ -126,4 +126,4 @@ const result = await toolHub.invokeTool("utils.calculator", { expression: "1 + 2
 
 ---
 
-See `toolhub.yaml` for config and `examples/` for full tool layouts.
+See `toolhub.example.yaml` for config example and `examples/` for full tool layouts.

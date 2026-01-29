@@ -57,6 +57,31 @@ describe("LangChainAdapter", () => {
     const result = await adapter.invoke(spec, {}, defaultCtx);
     expect(result.result).toEqual({ output: "plain string" });
   });
+
+  it("should support { result, evidence? } return (same as Skill)", async () => {
+    const customEvidence = [
+      {
+        type: "text" as const,
+        ref: "custom-ref",
+        summary: "Custom evidence from LangChain tool",
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    adapter.registerTool("test/with-evidence", {
+      async invoke() {
+        return {
+          result: { value: 42 },
+          evidence: customEvidence,
+        };
+      },
+    });
+
+    const spec = { ...calcToolSpec, name: "test/with-evidence" };
+    const out = await adapter.invoke(spec, {}, defaultCtx);
+    expect(out.result).toEqual({ value: 42 });
+    expect(out.raw).toBeDefined();
+    expect((out.raw as { evidence: unknown[] }).evidence).toEqual(customEvidence);
+  });
 });
 
 describe("MCPAdapter", () => {
@@ -267,6 +292,41 @@ describe("N8nAdapter", () => {
 
     expect(callCount).toBe(1); // Second call uses cached result
     expect(r1.result).toEqual(r2.result);
+  });
+
+  it("should support { result, evidence? } return (same as Skill/LangChain)", async () => {
+    const customEvidence = [
+      {
+        type: "text" as const,
+        ref: "n8n-workflow",
+        summary: "Custom evidence from n8n workflow",
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    const mockHttp: HttpClient = {
+      async fetch() {
+        return {
+          status: 200,
+          async json() {
+            return { result: { done: true }, evidence: customEvidence };
+          },
+          async text() { return ""; },
+        };
+      },
+    };
+
+    const adapter = new N8nAdapter({ httpClient: mockHttp });
+    const spec = {
+      ...calcToolSpec,
+      name: "workflow/with-evidence",
+      kind: "n8n" as const,
+      endpoint: "https://n8n.example.com/webhook/ev",
+    };
+
+    const out = await adapter.invoke(spec, {}, defaultCtx);
+    expect(out.result).toEqual({ done: true });
+    expect(out.raw).toBeDefined();
+    expect((out.raw as { evidence: unknown[] }).evidence).toEqual(customEvidence);
   });
 });
 

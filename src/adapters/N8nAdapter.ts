@@ -106,6 +106,8 @@ export class N8nAdapter implements ToolAdapter {
 
   /**
    * Invoke an n8n workflow.
+   * If the workflow returns { result, evidence? } (same as Skill/LangChain), the adapter
+   * uses result as the main result and passes evidence through raw for the runtime to merge.
    */
   async invoke(
     spec: ToolSpec,
@@ -143,7 +145,16 @@ export class N8nAdapter implements ToolAdapter {
         raw = await this.invokeApi(spec, args, ctx, idempotencyKey);
       }
 
-      const result = this.normalizeResult(raw as N8nResult);
+      // Support { result, evidence? } convention (same as Skill/LangChain) when evidence is present
+      const rawObj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : null;
+      const hasEvidence =
+        rawObj &&
+        "evidence" in rawObj &&
+        Array.isArray(rawObj.evidence);
+      const result =
+        hasEvidence && "result" in rawObj && rawObj.result !== undefined
+          ? rawObj.result
+          : this.normalizeResult(raw as N8nResult);
 
       // Store idempotency result
       if (idempotencyKey && result) {

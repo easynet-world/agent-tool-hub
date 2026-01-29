@@ -32,6 +32,27 @@ describe("DirectoryScanner - n8n tools", () => {
     expect(specs).toHaveLength(1);
     expect(specs[0]!.kind).toBe("n8n");
     expect(specs[0]!.resourceId).toBe("wf-123");
+    expect(specs[0]!.description).toBe("My workflow");
+  });
+
+  it("uses workflow name as description when no tool.json description", async () => {
+    await mkdir(join(toolsRoot, "slack-notify"));
+    await mkdir(join(toolsRoot, "slack-notify", "n8n"));
+    await writeFile(
+      join(toolsRoot, "slack-notify", "n8n", "workflow.json"),
+      JSON.stringify({
+        id: "wf-slack",
+        name: "Slack Notify",
+        nodes: [{ id: "n1", type: "webhook" }],
+      }),
+    );
+
+    const scanner = new DirectoryScanner({ roots: [toolsRoot] });
+    const specs = await scanner.scan();
+
+    expect(specs).toHaveLength(1);
+    expect(specs[0]!.kind).toBe("n8n");
+    expect(specs[0]!.description).toBe("Slack Notify");
   });
 
   it("throws on workflow.json without nodes", async () => {
