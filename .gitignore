@@ -3,3 +3,5 @@ dist
 .DS_Store
 # Local config (copy from toolhub.example.yaml)
 toolhub.yaml
+# Generated example output (e.g. sp500-top20-report.html)
+examples/output/

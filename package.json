@@ -27,6 +27,7 @@
     "dev": "tsup --watch",
     "example:agent-toolhub": "node examples/agent-toolhub-example.mjs",
     "example:agent-toolhub-deepagents-sp500": "node examples/agent-toolhub-deepagents-sp500.mjs",
+    "example:agent-toolhub-deepagents-sp500:demo": "DEMO=1 node examples/agent-toolhub-deepagents-sp500.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
