@@ -130,13 +130,15 @@ See `toolhub.example.yaml` for config example and `examples/` for full tool layo
 
 ### Enhanced example (DeepAgents + S&P 500)
 
-A second example uses **LangChain 1.x** and **DeepAgents** (instead of the built-in ReAct agent) to run a more complex task: pick the top 20 S&P 500 stocks by market cap, analyze and predict, and generate an HTML report. Run it with:
+A second example uses **LangChain 1.x** and **DeepAgents** (instead of the built-in ReAct agent) to run a more complex task: pick the top 10 S&P 500 stocks by market cap, analyze and predict, and generate an HTML report (2500+ words). Run it with:
 
 ```bash
 npm run build
 npm run example:agent-toolhub-deepagents-sp500
 ```
 
-Quick run that writes the report (3 stocks, short): `npm run example:agent-toolhub-deepagents-sp500:demo`. Long report in demo (3 stocks, 1500+ words): `npm run example:agent-toolhub-deepagents-sp500:demo:long` or `DEMO=1 LONG_REPORT=1 npm run example:agent-toolhub-deepagents-sp500`. Full run (20 stocks, 5000+ words) may need higher `RECURSION_LIMIT`. Report path: `examples/output/sp500-top20-report.html`. Optional env: `OPENAI_BASE_URL`, `OPENAI_MODEL`, `OPENAI_API_KEY`, `RECURSION_LIMIT`, `DEMO`, `LONG_REPORT`.
+Report path: `examples/output/sp500-top10-report.html`. Optional env: `OPENAI_BASE_URL`, `OPENAI_MODEL`, `OPENAI_API_KEY`, `RECURSION_LIMIT`, `DEBUG`.
+
+The example uses the framework’s **ToolHub → LangChain** bridge: `import { toolHubToLangChainTools } from "@easynet/agent-tool-hub/langchain-tools"` (requires optional peer deps `langchain`, `zod`).
 
 Requires devDependencies: `deepagents`, `langchain`, `@langchain/openai`, `zod`. If you see peer dependency conflicts (e.g. with `@easynet/n8n-local`), run `npm install --legacy-peer-deps`.

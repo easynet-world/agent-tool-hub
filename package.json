@@ -14,6 +14,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./langchain-tools": {
+      "types": "./dist/langchain-tools.d.ts",
+      "import": "./dist/langchain-tools.js",
+      "require": "./dist/langchain-tools.cjs"
     }
   },
   "files": [
@@ -27,8 +32,6 @@
     "dev": "tsup --watch",
     "example:agent-toolhub": "node examples/agent-toolhub-example.mjs",
     "example:agent-toolhub-deepagents-sp500": "node examples/agent-toolhub-deepagents-sp500.mjs",
-    "example:agent-toolhub-deepagents-sp500:demo": "DEMO=1 node examples/agent-toolhub-deepagents-sp500.mjs",
-    "example:agent-toolhub-deepagents-sp500:demo:long": "DEMO=1 LONG_REPORT=1 node examples/agent-toolhub-deepagents-sp500.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
@@ -68,13 +71,21 @@
   },
   "peerDependencies": {
     "@langchain/core": ">=0.3.0",
-    "@modelcontextprotocol/sdk": ">=1.0.0"
+    "@modelcontextprotocol/sdk": ">=1.0.0",
+    "langchain": ">=1.0.0",
+    "zod": ">=3.23.0"
   },
   "peerDependenciesMeta": {
     "@modelcontextprotocol/sdk": {
       "optional": true
     },
     "@langchain/core": {
+      "optional": true
+    },
+    "langchain": {
+      "optional": true
+    },
+    "zod": {
       "optional": true
     }
   },

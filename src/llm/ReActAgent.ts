@@ -87,12 +87,29 @@ export class ReActAgent {
     }));
   }
 
+  /**
+   * Parse tool-call arguments. Handles models that send text + JSON
+   * (e.g. "Let's fetch.{\"symbol\":\"GOOGL\"}") by extracting the last {...} and parsing.
+   */
   private parseArgs(json: string | undefined): unknown {
-    if (!json) return {};
+    const str = (json ?? "").trim();
+    if (!str) return {};
     try {
-      return JSON.parse(json);
+      const parsed = JSON.parse(str) as unknown;
+      if (parsed != null && typeof parsed === "object" && !Array.isArray(parsed))
+        return parsed;
     } catch {
-      return {};
+      // ignore
     }
+    const lastBrace = str.lastIndexOf("{");
+    if (lastBrace === -1) return {};
+    try {
+      const parsed = JSON.parse(str.slice(lastBrace)) as unknown;
+      if (parsed != null && typeof parsed === "object" && !Array.isArray(parsed))
+        return parsed;
+    } catch {
+      // ignore
+    }
+    return {};
   }
 }
