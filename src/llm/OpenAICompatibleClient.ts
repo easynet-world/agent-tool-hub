@@ -1,6 +1,6 @@
 /**
  * Minimal client for OpenAI-compatible chat completions API.
- * Use createOpenAICompatibleClient(baseUrl, model, apiKey?) and then .chat(messages).
+ * Use createOpenAICompatibleClient(baseUrl, model, apiKey?) and then .chat(messages) or .chatWithTools(messages, tools).
  */
 
 export interface ChatMessage {
@@ -14,29 +14,42 @@ export interface ChatOptions {
 }
 
 export interface ChatResult {
-  /** Content of the first assistant reply. */
   content: string;
-  /** Raw response from the API (for debugging or advanced use). */
+  raw: unknown;
+}
+
+export interface OpenAIToolDefinition {
+  type: "function";
+  function: {
+    name: string;
+    description?: string;
+    parameters?: object;
+  };
+}
+
+export interface AssistantMessageWithToolCalls {
+  role: "assistant";
+  content?: string | null;
+  tool_calls?: Array<{
+    id: string;
+    type: "function";
+    function: { name: string; arguments: string };
+  }>;
+}
+
+export interface ChatWithToolsResult {
+  message: AssistantMessageWithToolCalls;
   raw: unknown;
 }
 
 export interface OpenAICompatibleClientConfig {
-  /** Base URL of the API (e.g. https://api.openai.com/v1). Trailing slash is optional. */
   baseUrl: string;
-  /** Model name (e.g. gpt-4o-mini). */
   model: string;
-  /** API key; optional if the provider does not require it. */
   apiKey?: string;
 }
 
-/**
- * Creates an OpenAI-compatible LLM client.
- *
- * @param baseUrl - LLM API base URL (e.g. https://api.openai.com/v1)
- * @param model - Model name (e.g. gpt-4o-mini)
- * @param apiKey - Optional API key
- * @returns Client instance with .chat(messages, options?)
- */
+const DEFAULT_TIMEOUT_MS = 60_000;
+
 export function createOpenAICompatibleClient(
   baseUrl: string,
   model: string,
@@ -56,49 +69,103 @@ export class OpenAICompatibleClient {
     this.apiKey = config.apiKey;
   }
 
-  /**
-   * Send chat messages and return the first assistant reply.
-   *
-   * @param messages - Array of { role, content }
-   * @param options - Optional timeout
-   * @returns Promise of { content, raw }
-   */
   async chat(
     messages: ChatMessage[],
     options?: ChatOptions
   ): Promise<ChatResult> {
-    const timeoutMs = options?.timeoutMs ?? 60_000;
-    const url = `${this.baseUrl}/chat/completions`;
+    const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const raw = await this.request(
+      {
+        model: this.model,
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      },
+      timeoutMs
+    );
+    const choices = (raw as { choices?: Array<{ message?: { content?: string } }> }).choices;
+    const content =
+      Array.isArray(choices) && choices[0]?.message?.content != null
+        ? String(choices[0].message.content)
+        : "";
+    return { content, raw };
+  }
+
+  async chatWithTools(
+    messages: Array<
+      | ChatMessage
+      | { role: "tool"; content: string; tool_call_id: string }
+      | (Omit<AssistantMessageWithToolCalls, "role"> & { role: "assistant" })
+    >,
+    tools: OpenAIToolDefinition[],
+    options?: ChatOptions
+  ): Promise<ChatWithToolsResult> {
+    const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const raw = await this.request(
+      {
+        model: this.model,
+        messages: messages.map((m) => this.serializeMessage(m)),
+        tools,
+      },
+      timeoutMs
+    );
+    const choices = (raw as {
+      choices?: Array<{
+        message?: {
+          content?: string | null;
+          tool_calls?: AssistantMessageWithToolCalls["tool_calls"];
+        };
+      }>;
+    }).choices;
+    const msg = Array.isArray(choices) ? choices[0]?.message : undefined;
+    return {
+      message: {
+        role: "assistant",
+        content: msg?.content ?? null,
+        tool_calls: msg?.tool_calls,
+      },
+      raw,
+    };
+  }
+
+  private buildHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    if (this.apiKey) {
-      headers["Authorization"] = `Bearer ${this.apiKey}`;
-    }
+    if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
+    return headers;
+  }
 
+  private serializeMessage(
+    m:
+      | ChatMessage
+      | { role: "tool"; content: string; tool_call_id: string }
+      | (AssistantMessageWithToolCalls & { role: "assistant" })
+  ): object {
+    if (m.role === "tool")
+      return { role: "tool", content: m.content, tool_call_id: m.tool_call_id };
+    if (m.role === "assistant" && "tool_calls" in m && m.tool_calls?.length)
+      return { role: "assistant", content: m.content ?? null, tool_calls: m.tool_calls };
+    return { role: m.role, content: (m as ChatMessage).content };
+  }
+
+  private async request(body: object, timeoutMs: number): Promise<unknown> {
+    const url = `${this.baseUrl}/chat/completions`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
-
     let response: Response;
     try {
       response = await fetch(url, {
         method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: this.model,
-          messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        }),
+        headers: this.buildHeaders(),
+        body: JSON.stringify(body),
         signal: controller.signal,
       });
     } catch (err) {
       clearTimeout(timer);
-      if (err instanceof Error && err.name === "AbortError") {
+      if (err instanceof Error && err.name === "AbortError")
         throw new Error(`LLM request timed out after ${timeoutMs}ms`);
-      }
       throw err;
     }
     clearTimeout(timer);
-
     const raw = (await response.json()) as unknown;
     if (!response.ok) {
       const errBody =
@@ -109,13 +176,6 @@ export class OpenAICompatibleClient {
         `LLM API error ${response.status}: ${JSON.stringify(errBody)}`
       );
     }
-
-    const choices = (raw as { choices?: Array<{ message?: { content?: string } }> }).choices;
-    const content =
-      Array.isArray(choices) && choices[0]?.message?.content != null
-        ? String(choices[0].message.content)
-        : "";
-
-    return { content, raw };
+    return raw;
   }
 }
