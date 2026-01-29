@@ -4,11 +4,11 @@ import type { Capability, ToolSpec } from "../types/ToolSpec.js";
 import type { ExecContext, ToolIntent, BudgetConfig } from "../types/ToolIntent.js";
 import type { ToolResult } from "../types/ToolResult.js";
 import type { DirectoryScannerOptions } from "../discovery/types.js";
-import type { SkillDefinition } from "../discovery/loaders/SkillManifest.js";
 import type {
   SkillInstructionResult,
   SkillAdapterOptions,
 } from "../adapters/SkillAdapter.js";
+import { extractSkillDefinitionFromSpec, specToToolDescription } from "./ToolHubDescription.js";
 import type { LangChainAdapterOptions } from "../adapters/LangChainAdapter.js";
 import type { MCPAdapterOptions } from "../adapters/MCPAdapter.js";
 import type { N8nAdapterOptions } from "../adapters/N8nAdapter.js";
@@ -330,36 +330,7 @@ export class ToolHub {
     if (!spec) {
       throw new Error(`Tool not found: ${toolName}`);
     }
-
-    if (spec.kind === "skill") {
-      const def = this.extractSkillDefinition(spec);
-      if (def) {
-        return {
-          name: def.frontmatter.name,
-          description: def.frontmatter.description,
-          instructions: def.instructions,
-          resources: def.resources.map((r) => ({
-            path: r.relativePath,
-            type: r.type,
-          })),
-          dirPath: def.dirPath,
-        };
-      }
-    }
-
-    return {
-      name: spec.name,
-      description: spec.description,
-      kind: spec.kind,
-      version: spec.version,
-      tags: spec.tags,
-      capabilities: spec.capabilities,
-      inputSchema: spec.inputSchema,
-      outputSchema: spec.outputSchema,
-      costHints: spec.costHints,
-      endpoint: spec.endpoint,
-      resourceId: spec.resourceId,
-    };
+    return specToToolDescription(spec, extractSkillDefinitionFromSpec);
   }
 
   /**
@@ -512,13 +483,6 @@ export class ToolHub {
         hint: "Install @modelcontextprotocol/sdk and ensure MCP server command is available.",
       });
     }
-  }
-
-  private extractSkillDefinition(spec: ToolSpec): SkillDefinition | undefined {
-    if (spec.impl && typeof spec.impl === "object" && "frontmatter" in spec.impl) {
-      return spec.impl as SkillDefinition;
-    }
-    return undefined;
   }
 
 }
