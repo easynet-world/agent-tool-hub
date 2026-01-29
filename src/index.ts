@@ -179,6 +179,18 @@ export type {
   LoadedTool,
 } from "./discovery/types.js";
 
+// === LLM (OpenAI-compatible client) ===
+export {
+  createOpenAICompatibleClient,
+  OpenAICompatibleClient,
+} from "./llm/OpenAICompatibleClient.js";
+export type {
+  ChatMessage,
+  ChatOptions,
+  ChatResult,
+  OpenAICompatibleClientConfig,
+} from "./llm/OpenAICompatibleClient.js";
+
 // === ToolHub (high-level facade) ===
 export { ToolHub, createToolHub } from "./tool-hub/ToolHub.js";
 export type {
