@@ -30,6 +30,8 @@ import { registerCoreTools } from "../core-tools/CoreToolsModule.js";
 import { initAllTools, refreshTools, splitRoots } from "./ToolHubDiscovery.js";
 import { watchRoots, unwatchRoots } from "./ToolHubWatcher.js";
 import { rootKey } from "./ToolHubHelpers.js";
+import { createMCPClient } from "../adapters/createMCPClientFromConfig.js";
+import type { MCPServerConfig } from "../discovery/types.js";
 
 export interface ToolMetadata {
   name: string;
@@ -106,6 +108,8 @@ export class ToolHub {
   private readonly watchConfig?: ToolHubInitOptions["watch"];
   private readonly watchers = new Map<string, FSWatcher>();
   private readonly watchTimers = new Map<string, NodeJS.Timeout>();
+  private mcpClientClose: (() => Promise<void>) | null = null;
+  private mcpSignalHandlersRegistered = false;
 
   constructor(options: ToolHubInitOptions) {
     this.registry = new ToolRegistry();
@@ -189,30 +193,38 @@ export class ToolHub {
 
   /**
    * Initialize all tools by scanning the configured roots.
+   * n8n-local is started only when there are n8n specs (lazy start).
    */
   async initAllTools(): Promise<ToolSpec[]> {
-    if (this.n8nMode === "local") {
+    const specs = await this.scanner.scan();
+    if (this.n8nMode === "local" && specs.some((s) => s.kind === "n8n")) {
       await this.ensureN8nLocalAdapter();
     }
-    const specs = await initAllTools(this.scanner, {
-      registry: this.registry,
-      logger: this.logger,
-      includeCoreTools: this.includeCoreTools,
-      coreToolsConfig: this.coreToolsConfig,
-      roots: this.scannerOptions.roots,
-    }, this.n8nLocalAdapter);
-    
+    const result = await initAllTools(
+      this.scanner,
+      {
+        registry: this.registry,
+        logger: this.logger,
+        includeCoreTools: this.includeCoreTools,
+        coreToolsConfig: this.coreToolsConfig,
+        roots: this.scannerOptions.roots,
+      },
+      this.n8nLocalAdapter,
+      specs,
+    );
+
     if (this.watchConfig?.enabled) {
       this.watchRoots({
         debounceMs: this.watchConfig.debounceMs,
         persistent: this.watchConfig.persistent,
       });
     }
-    return specs;
+    return result;
   }
 
   /**
    * Refresh tools by re-scanning current roots.
+   * n8n-local is started only when there are n8n specs (lazy start).
    */
   async refreshTools(): Promise<ToolSpec[]> {
     if (this.includeCoreTools) {
@@ -222,17 +234,22 @@ export class ToolHub {
       const coreAdapter = registerCoreTools(this.registry, this.coreToolsConfig);
       this.runtime.registerAdapter(coreAdapter);
     }
-    if (this.n8nMode === "local") {
+    const specs = await this.scanner.scan();
+    if (this.n8nMode === "local" && specs.some((s) => s.kind === "n8n")) {
       await this.ensureN8nLocalAdapter();
     }
-    const specs = await refreshTools(this.scanner, {
-      registry: this.registry,
-      logger: this.logger,
-      includeCoreTools: this.includeCoreTools,
-      coreToolsConfig: this.coreToolsConfig,
-      roots: this.scannerOptions.roots,
-    }, this.n8nLocalAdapter);
-    return specs;
+    return refreshTools(
+      this.scanner,
+      {
+        registry: this.registry,
+        logger: this.logger,
+        includeCoreTools: this.includeCoreTools,
+        coreToolsConfig: this.coreToolsConfig,
+        roots: this.scannerOptions.roots,
+      },
+      this.n8nLocalAdapter,
+      specs,
+    );
   }
 
   /**
@@ -353,8 +370,18 @@ export class ToolHub {
     args: unknown,
     options: InvokeOptions = {},
   ): Promise<ToolResult> {
-    if (this.n8nMode === "local") {
+    let spec = this.registry.get(toolName);
+    if (this.n8nMode === "local" && spec?.kind === "n8n") {
       await this.ensureN8nLocalAdapter();
+    }
+    if (spec?.kind === "mcp") {
+      await this.ensureMCPClientStarted();
+      // After sync, placeholder may have been replaced by server tools; resolve tool name again
+      spec = this.registry.get(toolName);
+      if (!spec) {
+        const firstMcp = this.registry.snapshot().find((s) => s.kind === "mcp");
+        if (firstMcp) toolName = firstMcp.name;
+      }
     }
     const requestId = options.requestId ?? `req_${randomUUID()}`;
     const taskId = options.taskId ?? `task_${randomUUID()}`;
@@ -384,8 +411,18 @@ export class ToolHub {
    * Invoke a tool using a pre-built ToolIntent and ExecContext.
    */
   async invokeIntent(intent: ToolIntent, ctx: ExecContext): Promise<ToolResult> {
-    if (this.n8nMode === "local") {
+    let spec = this.registry.get(intent.tool);
+    if (this.n8nMode === "local" && spec?.kind === "n8n") {
       await this.ensureN8nLocalAdapter();
+    }
+    if (spec?.kind === "mcp") {
+      await this.ensureMCPClientStarted();
+      if (!this.registry.get(intent.tool)) {
+        const firstMcp = this.registry.snapshot().find((s) => s.kind === "mcp");
+        if (firstMcp) {
+          intent = { ...intent, tool: firstMcp.name };
+        }
+      }
     }
     return this.runtime.invoke(intent, ctx);
   }
@@ -398,8 +435,37 @@ export class ToolHub {
     return this.runtime;
   }
 
+  /**
+   * Sync MCP tool specs from the MCP adapter (server) into the registry.
+   * Call after setClient() so tool names, descriptions, and schemas come from the MCP server.
+   * Replaces discovery-placeholder MCP specs with the real list from the server.
+   */
+  async syncMCPToolsFromAdapter(): Promise<ToolSpec[]> {
+    const mcpAdapter = this.runtime.getAdapter("mcp");
+    if (!mcpAdapter?.listTools) {
+      return [];
+    }
+    const specs = await mcpAdapter.listTools();
+    const mcpNames = this.registry
+      .snapshot()
+      .filter((s) => s.kind === "mcp")
+      .map((s) => s.name);
+    for (const name of mcpNames) {
+      this.registry.unregister(name);
+    }
+    this.registry.bulkRegister(specs);
+    this.logger.info("mcp.sync", { count: specs.length, names: specs.map((s) => s.name) });
+    return specs;
+  }
+
   async shutdown(): Promise<void> {
     this.unwatchRoots();
+    if (this.mcpClientClose) {
+      await this.mcpClientClose().catch((err) => {
+        this.logger.warn("mcp.close", { message: err instanceof Error ? err.message : String(err) });
+      });
+      this.mcpClientClose = null;
+    }
     if (this.n8nLocalAdapter) {
       await this.n8nLocalAdapter.stop();
     }
@@ -410,6 +476,42 @@ export class ToolHub {
     const { N8nLocalAdapter } = await import("../adapters/N8nLocalAdapter.js");
     this.n8nLocalAdapter = new N8nLocalAdapter(this.n8nLocalOptions);
     this.runtime.registerAdapter(this.n8nLocalAdapter);
+  }
+
+  /**
+   * Lazy start: only start the MCP client when an MCP tool is actually invoked
+   * and a stdio-based MCP config was discovered. If no MCP definition exists
+   * in the registry, this is a no-op.
+   * Uses the first MCP spec's impl (mcpConfig); ignores URL-only configs.
+   */
+  private async ensureMCPClientStarted(): Promise<void> {
+    if (this.mcpClientClose) return;
+    const mcpSpec = this.registry.snapshot().find((s) => s.kind === "mcp");
+    const config = mcpSpec?.impl as MCPServerConfig | undefined;
+    if (!config || typeof config !== "object" || config.url) return;
+    try {
+      const result = await createMCPClient(config);
+      if (!result) return;
+      const mcpAdapter = this.runtime.getAdapter("mcp") as { setClient: (c: import("../adapters/MCPAdapter.js").MCPClientLike) => void } | undefined;
+      if (mcpAdapter?.setClient) {
+        mcpAdapter.setClient(result.client);
+        await this.syncMCPToolsFromAdapter();
+        this.mcpClientClose = result.close;
+        this.logger.info("mcp.autoStart", { tool: mcpSpec?.name });
+        // When process receives SIGINT/SIGTERM, close MCP so process and MCP shut down together.
+        if (!this.mcpSignalHandlersRegistered) {
+          this.mcpSignalHandlersRegistered = true;
+          const shutdown = () => this.shutdown().catch(() => {});
+          process.once("SIGINT", shutdown);
+          process.once("SIGTERM", shutdown);
+        }
+      }
+    } catch (err) {
+      this.logger.warn("mcp.autoStart", {
+        message: err instanceof Error ? err.message : String(err),
+        hint: "Install @modelcontextprotocol/sdk and ensure MCP server command is available.",
+      });
+    }
   }
 
   private extractSkillDefinition(spec: ToolSpec): SkillDefinition | undefined {

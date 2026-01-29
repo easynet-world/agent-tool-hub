@@ -89,6 +89,11 @@ export type {
   MCPToolDefinition,
   MCPCallResult,
 } from "./adapters/MCPAdapter.js";
+export { createMCPClient, createMCPClientFromConfig } from "./adapters/createMCPClientFromConfig.js";
+export type {
+  CreateMCPClientResult,
+  MCPStdioConfig,
+} from "./adapters/createMCPClientFromConfig.js";
 export { N8nAdapter } from "./adapters/N8nAdapter.js";
 export type {
   HttpClient,

@@ -6,6 +6,12 @@ import { DiscoveryError } from "../errors.js";
 /**
  * Load an n8n tool from its directory.
  * Reads workflow.json and validates it has a "nodes" array.
+ *
+ * Description for the tool spec is taken (in order) from:
+ * 1. tool.json "description" (if present)
+ * 2. workflow.json "description" or "meta.description"
+ * 3. workflow.json "name" (n8n workflow name)
+ * 4. Fallback: "n8n tool: <dirName>"
  */
 export async function loadN8nTool(
   dirPath: string,

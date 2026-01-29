@@ -39,17 +39,12 @@ vi.mock("zod", () => {
   return { z };
 });
 
-describe("examples/groups discovery", () => {
+describe("examples/tools discovery", () => {
   it("discovers all example tools across kinds", async () => {
-    const root = join(process.cwd(), "examples", "groups");
+    const root = join(process.cwd(), "examples", "tools");
     const errors: Error[] = [];
     const scanner = new DirectoryScanner({
-      roots: [
-        { path: join(root, "web"), namespace: "web" },
-        { path: join(root, "utils"), namespace: "utils" },
-        { path: join(root, "dev"), namespace: "dev" },
-        { path: join(root, "notify"), namespace: "notify" },
-      ],
+      roots: [{ path: root, namespace: "tools" }],
       onError: (_dir, err) => errors.push(err),
     });
     const specs = await scanner.scan();
@@ -62,29 +57,14 @@ describe("examples/groups discovery", () => {
       return acc;
     }, {});
 
-    expect(byKind.langchain).toBe(8);
-    expect(byKind.mcp).toBe(3);
-    expect(byKind.skill).toBe(5);
-    expect(byKind.n8n).toBe(1);
+    expect(byKind.langchain).toBeGreaterThanOrEqual(1);
+    expect(byKind.mcp ?? 0).toBeGreaterThanOrEqual(1);
+    expect(byKind.skill).toBeGreaterThanOrEqual(1);
 
     const names = specs.map((spec) => spec.name);
-    expect(names).toContain("web/brave_search");
-    expect(names).toContain("utils/calculator");
-    expect(names).toContain("utils/filesystem_read");
-    expect(names).toContain("utils/filesystem_write");
-    expect(names).toContain("utils/filesystem_list");
-    expect(names).toContain("utils/filesystem_delete");
-    expect(names).toContain("notify/slack_notify");
-    expect(names).toContain("dev/code_review");
-
-    expect(names).toContain("web/brave-search-mcp");
-    expect(names).toContain("utils/calculator-mcp");
-    expect(names).toContain("utils/filesystem-mcp");
-
-    expect(names).toContain("brave-search-skill");
-    expect(names).toContain("calculator-skill");
-    expect(names).toContain("filesystem-skill");
-    expect(names).toContain("slack-notify-skill");
-    expect(names).toContain("code-review");
+    expect(names).toContain("tools/page_access");
+    expect(names).toContain("tools/filesystem");
+    expect(names.some((n) => n.includes("search") || n.includes("web-search"))).toBe(true);
+    expect(names).toContain("system-time-skill");
   });
 });

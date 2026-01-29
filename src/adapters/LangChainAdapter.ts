@@ -6,6 +6,9 @@ import type { DebugOptions, Logger } from "../observability/Logger.js";
 /**
  * Interface for LangChain-compatible tool instances.
  * Matches @langchain/core BaseTool.invoke() signature.
+ *
+ * Return value: can be any value, or { result, evidence? } (same as Skill) to attach
+ * custom evidence; the runtime merges adapter evidence into ToolResult.evidence.
  */
 export interface LangChainToolLike {
   invoke(input: unknown, config?: unknown): Promise<unknown>;
@@ -110,8 +113,15 @@ export class LangChainAdapter implements ToolAdapter {
         },
       });
 
-      // Normalize result
-      const result = this.normalizeResult(raw);
+      // Support { result, evidence? } convention (same as Skill) only when evidence is present
+      const hasEvidence =
+        raw &&
+        typeof raw === "object" &&
+        "evidence" in raw &&
+        Array.isArray((raw as { evidence: unknown }).evidence);
+      const result = hasEvidence && "result" in raw
+        ? (raw as { result: unknown }).result
+        : this.normalizeResult(raw);
 
       if (this.logger.isEnabled("debug")) {
         this.logger.debug("invoke.ok", {

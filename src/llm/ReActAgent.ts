@@ -47,7 +47,7 @@ export class ReActAgent {
     instruction: string,
     options: ReActAgentRunOptions = {}
   ): Promise<ReActAgentRunResult> {
-    const maxSteps = options.maxSteps ?? 10;
+    const maxSteps = options.maxSteps ?? 100;
     const tools = this.getTools();
     const messages: AgentMessage[] = [
       { role: "system", content: options.systemPrompt ?? DEFAULT_PROMPT },

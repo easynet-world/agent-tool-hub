@@ -16,6 +16,8 @@ import type { ToolRegistry } from "./registry/ToolRegistry.js";
 import type { PTCRuntime } from "./core/PTCRuntime.js";
 
 export { ToolHub, createToolHub };
+export { createMCPClientFromConfig } from "./adapters/createMCPClientFromConfig.js";
+export type { CreateMCPClientResult } from "./adapters/createMCPClientFromConfig.js";
 export type { ToolHubInitOptions, InvokeOptions } from "./tool-hub/ToolHub.js";
 
 /**
@@ -86,6 +88,10 @@ export class AgentToolHub {
 
   getRuntime(): PTCRuntime {
     return this.requireHub().getRuntime();
+  }
+
+  async syncMCPToolsFromAdapter(): Promise<ToolSpec[]> {
+    return this.requireHub().syncMCPToolsFromAdapter();
   }
 
   async refreshTools(): Promise<ToolSpec[]> {

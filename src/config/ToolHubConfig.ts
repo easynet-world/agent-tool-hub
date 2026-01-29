@@ -137,11 +137,11 @@ export function mapToolHubConfig(
   const toolHub = (config.toolHub ?? {}) as Record<string, any>;
   const discovery = (config.discovery ?? toolHub.discovery ?? {}) as Record<string, any>;
   const system = (config.system ?? {}) as Record<string, any>;
-  const security = (config.security ?? {}) as Record<string, any>;
-  const runtime = system.runtime ?? config.runtime ?? {};
+  const security = (config.security ?? toolHub.security ?? {}) as Record<string, any>;
+  const runtime = system.runtime ?? config.runtime ?? toolHub.runtime ?? {};
   const coreToolsRaw =
     (system.coreTools ?? config.coreTools ?? {}) as Record<string, any>;
-  const adapters = (config.adapters ?? {}) as Record<string, any>;
+  const adapters = (config.adapters ?? toolHub.adapters ?? {}) as Record<string, any>;
 
   const rootsRaw = (discovery.roots ?? toolHub.roots ?? []) as Array<
     | string
