@@ -189,7 +189,25 @@ export type {
   ChatOptions,
   ChatResult,
   OpenAICompatibleClientConfig,
+  OpenAIToolDefinition,
+  AssistantMessageWithToolCalls,
+  ChatWithToolsResult,
 } from "./llm/OpenAICompatibleClient.js";
+
+// === ReAct Agent ===
+export { ReActAgent } from "./llm/ReActAgent.js";
+export type {
+  ReActAgentToolHub,
+  ReActAgentRunOptions,
+  ReActAgentRunResult,
+} from "./llm/ReActAgent.js";
+// Backward compatibility: LangChainAgent was renamed to ReActAgent
+export { ReActAgent as LangChainAgent } from "./llm/ReActAgent.js";
+export type {
+  ReActAgentToolHub as LangChainAgentToolHub,
+  ReActAgentRunOptions as LangChainAgentRunOptions,
+  ReActAgentRunResult as LangChainAgentRunResult,
+} from "./llm/ReActAgent.js";
 
 // === ToolHub (high-level facade) ===
 export { ToolHub, createToolHub } from "./tool-hub/ToolHub.js";

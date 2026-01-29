@@ -25,6 +25,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "example:agent-toolhub": "node examples/agent-toolhub-example.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

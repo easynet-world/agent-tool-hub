@@ -159,4 +159,91 @@ describe("OpenAICompatibleClient", () => {
       expect(init?.signal).toBeInstanceOf(AbortSignal);
     });
   });
+
+  describe("chatWithTools", () => {
+    it("sends tools in request and returns assistant message with tool_calls", async () => {
+      const tools = [
+        {
+          type: "function" as const,
+          function: {
+            name: "get_weather",
+            description: "Get weather",
+            parameters: { type: "object" },
+          },
+        },
+      ];
+      const mockJson = vi.fn().mockResolvedValue({
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content: null,
+              tool_calls: [
+                {
+                  id: "call_1",
+                  type: "function",
+                  function: { name: "get_weather", arguments: '{"city":"NYC"}' },
+                },
+              ],
+            },
+          },
+        ],
+      });
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, json: mockJson });
+
+      const client = createOpenAICompatibleClient(
+        "https://api.example.com/v1",
+        "gpt-4o-mini"
+      );
+      const result = await client.chatWithTools(
+        [{ role: "user", content: "Weather in NYC?" }],
+        tools
+      );
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      const body = JSON.parse(
+        (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1]?.body as string
+      );
+      expect(body.tools).toEqual(tools);
+      expect(body.messages).toEqual([{ role: "user", content: "Weather in NYC?" }]);
+
+      expect(result.message.role).toBe("assistant");
+      expect(result.message.tool_calls).toHaveLength(1);
+      expect(result.message.tool_calls![0].function.name).toBe("get_weather");
+      expect(result.message.tool_calls![0].function.arguments).toBe(
+        '{"city":"NYC"}'
+      );
+    });
+
+    it("includes tool result messages when present", async () => {
+      const tools = [{ type: "function" as const, function: { name: "x", description: "" } }];
+      const mockJson = vi.fn().mockResolvedValue({
+        choices: [{ message: { role: "assistant", content: "Done." } }],
+      });
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, json: mockJson });
+
+      const client = createOpenAICompatibleClient(
+        "https://api.example.com/v1",
+        "gpt-4o-mini"
+      );
+      await client.chatWithTools(
+        [
+          { role: "user", content: "Hi" },
+          { role: "assistant", content: null, tool_calls: [{ id: "c1", type: "function", function: { name: "x", arguments: "{}" } }] },
+          { role: "tool", content: "42", tool_call_id: "c1" },
+        ],
+        tools
+      );
+
+      const body = JSON.parse(
+        (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1]?.body as string
+      );
+      expect(body.messages).toHaveLength(3);
+      expect(body.messages[2]).toEqual({
+        role: "tool",
+        content: "42",
+        tool_call_id: "c1",
+      });
+    });
+  });
 });

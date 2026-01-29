@@ -1,0 +1,38 @@
+# Minimal ToolHub config for agent-toolhub-example (no n8n-local).
+# Paths are relative to this file's directory (examples/).
+
+discovery:
+  hotReload:
+    enabled: false
+  roots:
+    - path: ./groups/utils
+      namespace: utils
+    - path: ./groups/dev
+      namespace: dev
+
+debug:
+  enabled: false
+  level: info
+
+runtime:
+  includeRaw: true
+  defaultMaxRetries: 0
+
+security:
+  sandbox:
+    root: /tmp/toolhub-sandbox
+  network:
+    allowedHosts: []
+
+adapters:
+  n8n:
+    mode: api
+  mcp:
+    endpoint: ""
+  langchain:
+    tools: {}
+  comfyui:
+    apiBaseUrl: http://localhost:8188
+  skill:
+    definitions: {}
+    handlers: {}
