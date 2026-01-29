@@ -7,10 +7,10 @@
  * Prerequisites:
  *   npm install (includes deepagents, langchain, @langchain/openai, zod as devDependencies)
  *   Build: npm run build
- *   Optional: set OPENAI_BASE_URL and OPENAI_MODEL for your LLM (default: local OpenAI-compatible)
+ *   Optional: OPENAI_BASE_URL, OPENAI_MODEL (default: local OpenAI-compatible)
  *
  * Run: node examples/agent-toolhub-deepagents-sp500.mjs
- * Report (if the agent completes the write step): examples/output/sp500-top20-report.html
+ * Report (if agent completes write): examples/output/sp500-top20-report.html
  */
 
 import { mkdir } from "node:fs/promises";
@@ -22,31 +22,62 @@ import { tool } from "langchain";
 import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
 
-/** Report output path (relative to process.cwd(); file written by tools/filesystem). */
-const REPORT_PATH = "examples/output/sp500-top20-report.html";
+const REPORT_DIR = "examples/output";
+const REPORT_PATH = `${REPORT_DIR}/sp500-top20-report.html`;
 
-// --- ToolHub → LangChain tools (for DeepAgents) ---
+const TOOL_ARGS_SCHEMA = z.record(z.string(), z.unknown()).describe("Tool arguments as key-value object");
+
+function getEnvConfig() {
+  const v = (key, def) => process.env[key] ?? def;
+  const truthy = (key) => process.env[key] === "1" || process.env[key] === "true";
+  return {
+    baseURL: v("OPENAI_BASE_URL", "http://192.168.0.201:11434/v1"),
+    modelName: v("OPENAI_MODEL", "gpt-oss:latest"),
+    apiKey: v("OPENAI_API_KEY", "not-needed"),
+    recursionLimit: Number(v("RECURSION_LIMIT", "150")) || 150,
+    useDemo: truthy("DEMO") || truthy("SP500_DEMO"),
+    useLongReport: truthy("LONG_REPORT"),
+    debug: truthy("DEBUG"),
+  };
+}
+
 function toolHubToLangChainTools(toolHub) {
-  const registry = toolHub.getRegistry();
-  const specs = registry.snapshot();
+  const specs = toolHub.getRegistry().snapshot();
   return specs.map((spec) =>
     tool(
       async (args) => {
         const result = await toolHub.invokeTool(spec.name, args ?? {});
-        if (result.ok) return result.result;
-        return { error: result.error?.message ?? "Tool failed" };
+        return result.ok ? result.result : { error: result.error?.message ?? "Tool failed" };
       },
       {
         name: spec.name,
         description: spec.description ?? `Tool: ${spec.name}`,
-        schema: z.record(z.string(), z.unknown()).describe("Tool arguments as key-value object"),
+        schema: TOOL_ARGS_SCHEMA,
       }
     )
   );
 }
 
-// --- System prompt: equity analyst + tool usage ---
-// Use exact tool names from the registry (yahoo-finance-skill, tools/web-search-mcp, system-time-skill, tools/filesystem).
+function getTaskContent(useDemo, useLongReport) {
+  if (!useDemo) return USER_TASK;
+  return useLongReport ? USER_TASK_DEMO_LONG : USER_TASK_DEMO;
+}
+
+function getFinalReplyContent(messages) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const raw = messages[i]?.content ?? messages[i]?.text ?? messages[i]?.lc_kwargs?.content;
+    if (raw != null && String(raw).trim() !== "") {
+      if (typeof raw === "string") return raw;
+      if (Array.isArray(raw)) return raw.map((p) => (typeof p === "string" ? p : p?.text ?? JSON.stringify(p))).join("\n");
+      return JSON.stringify(raw);
+    }
+  }
+  return messages.length > 0
+    ? `Run completed. ${messages.length} message(s); last message had no text (agent may have ended on a tool step). Check todos/files in state or re-run with more steps.`
+    : "(no content)";
+}
+
+// --- Prompts (REPORT_PATH interpolated) ---
 const SYSTEM_PROMPT = `You are an expert equity analyst. Your task is to identify the top 20 S&P 500 stocks by market capitalization, perform full analysis and prediction for each, and produce a single consolidated report. The report must be at least 5000 words: full analysis, detailed company overviews, performance context, and explicit predictions/outlook for each stock and for the market.
 
 ## Tool names (call only these exact names)
@@ -73,81 +104,51 @@ You also have built-in tools: write_todos, ls, read_file, write_file, edit_file,
 
 Be thorough: the report must exceed 5000 words with full analysis and predictions for all 20 stocks and the market.`;
 
-// --- User task ---
 const USER_TASK = `Pick the top 20 S&P 500 stocks by market cap, do a full analysis and prediction for each, and generate one consolidated HTML report. The report body text must be at least 5000 words: for each stock write a full company overview (business, sector, competitive position), performance context, key metrics, and explicit predictions/outlook; add an executive summary and a market-level summary with predictions. Before saving, ensure the report content exceeds 5000 words—add more detailed analysis if needed. Save using **tools/filesystem** (not write_file): action "write", path "${REPORT_PATH}", text = the full HTML. Then confirm the file path in your reply.`;
 
-/** Shorter task for demo: 3 stocks only, so the agent completes and writes the file. Set DEMO=1 or SP500_DEMO=1. */
 const USER_TASK_DEMO = `Get quote data for AAPL, MSFT, and NVDA using yahoo-finance-skill (call with {"symbol":"AAPL"} etc.). Get current time with system-time-skill. Write a short HTML report (title, date, table with symbol, name, price for each) and save it using **tools/filesystem** only: action "write", path "${REPORT_PATH}", text = the HTML. Then reply with the absolutePath returned.`;
 
-/** Long demo: 3 stocks but report must be at least 1500 words (full analysis and predictions per stock). Set DEMO=1 and LONG_REPORT=1. */
 const USER_TASK_DEMO_LONG = `Get quote data for AAPL, MSFT, and NVDA using yahoo-finance-skill (call with {"symbol":"AAPL"}, {"symbol":"MSFT"}, {"symbol":"NVDA"}). Get current time with system-time-skill. Write a detailed HTML report of at least 1500 words: for each stock include a full company overview (business, sector, competitive position), current price and key metrics, performance context, and explicit predictions/outlook; add an executive summary and a short market summary. The report body text must exceed 1500 words. Save it using **tools/filesystem** only: action "write", path "${REPORT_PATH}", text = the full HTML. Then reply with the absolutePath returned.`;
 
 async function main() {
+  const env = getEnvConfig();
   const cwd = process.cwd();
   const reportAbsPath = resolve(cwd, REPORT_PATH);
-  await mkdir(resolve(cwd, "examples/output"), { recursive: true });
 
-  const configPath = "examples/toolhub.yaml";
-  const toolHub = await createAgentToolHub(configPath);
+  await mkdir(resolve(cwd, REPORT_DIR), { recursive: true });
 
+  const toolHub = await createAgentToolHub("examples/toolhub.yaml");
   const hubTools = toolHubToLangChainTools(toolHub);
-  const baseURL = process.env.OPENAI_BASE_URL ?? "http://192.168.0.201:11434/v1";
-  const modelName = process.env.OPENAI_MODEL ?? "gpt-oss:latest";
 
   const llm = new ChatOpenAI({
-    model: modelName,
+    model: env.modelName,
     temperature: 0,
-    configuration: {
-      baseURL,
-      apiKey: process.env.OPENAI_API_KEY ?? "not-needed",
-    },
+    configuration: { baseURL: env.baseURL, apiKey: env.apiKey },
   });
 
-  const agent = await createDeepAgent({
-    model: llm,
-    tools: hubTools,
-    systemPrompt: SYSTEM_PROMPT,
-  });
+  const agent = await createDeepAgent({ model: llm, tools: hubTools, systemPrompt: SYSTEM_PROMPT });
 
-  const threadId = `sp500-${Date.now()}`;
-  const recursionLimit = Number(process.env.RECURSION_LIMIT) || 150;
-  const config = {
-    configurable: { thread_id: threadId },
-    recursionLimit,
-  };
-
-  const useDemo = process.env.DEMO === "1" || process.env.SP500_DEMO === "1";
-  const useLongReport = process.env.LONG_REPORT === "1" || process.env.LONG_REPORT === "true";
-  const task = useDemo ? (useLongReport ? USER_TASK_DEMO_LONG : USER_TASK_DEMO) : USER_TASK;
-  if (useDemo) console.log(useLongReport ? "Demo mode: 3 stocks, long report (1500+ words).\n" : "Demo mode: 3 stocks, short report.\n");
+  const task = getTaskContent(env.useDemo, env.useLongReport);
+  if (env.useDemo) {
+    console.log(env.useLongReport ? "Demo mode: 3 stocks, long report (1500+ words).\n" : "Demo mode: 3 stocks, short report.\n");
+  }
 
   try {
     const result = await agent.invoke(
+      { messages: [{ role: "user", content: task }] },
       {
-        messages: [{ role: "user", content: task }],
-      },
-      config
+        configurable: { thread_id: `sp500-${Date.now()}` },
+        recursionLimit: env.recursionLimit,
+      }
     );
 
     const messages = result?.messages ?? result?.state?.messages ?? [];
-    const debug = process.env.DEBUG === "1" || process.env.DEBUG === "true";
-    if (debug && result) {
+    if (env.debug && result) {
       process.stderr.write("Result keys: " + Object.keys(result).join(", ") + "\n");
       if (messages.length) process.stderr.write("Last message keys: " + Object.keys(messages[messages.length - 1] || {}).join(", ") + "\n");
     }
 
-    let content = "(no content)";
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i];
-      const raw = msg?.content ?? msg?.text ?? msg?.lc_kwargs?.content;
-      if (raw != null && String(raw).trim() !== "") {
-        content = typeof raw === "string" ? raw : Array.isArray(raw) ? raw.map((p) => (typeof p === "string" ? p : p?.text ?? JSON.stringify(p))).join("\n") : JSON.stringify(raw);
-        break;
-      }
-    }
-    if (content === "(no content)" && messages.length > 0) {
-      content = `Run completed. ${messages.length} message(s); last message had no text (agent may have ended on a tool step). Check todos/files in state or re-run with more steps.`;
-    }
+    const content = getFinalReplyContent(messages);
     console.log("Final reply:", content);
 
     if (existsSync(reportAbsPath)) {
