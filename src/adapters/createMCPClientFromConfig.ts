@@ -59,7 +59,8 @@ export async function createMCPClient(
 
   // ToolHub is not a server; unref the MCP child process and its streams so the
   // main process can exit when the script is done (process and MCP close together).
-  const proc = (transport as { _process?: { unref?: () => void; stdin?: { unref?: () => void }; stdout?: { unref?: () => void }; stderr?: { unref?: () => void } } })._process;
+  // StdioClientTransport has private _process; cast via unknown for declaration emit.
+  const proc = (transport as unknown as { _process?: { unref?: () => void; stdin?: { unref?: () => void }; stdout?: { unref?: () => void }; stderr?: { unref?: () => void } } })._process;
   if (proc?.unref) proc.unref();
   if (proc?.stdin?.unref) proc.stdin.unref();
   if (proc?.stdout?.unref) proc.stdout.unref();
