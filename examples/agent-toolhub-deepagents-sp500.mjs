@@ -47,7 +47,7 @@ function toolHubToLangChainTools(toolHub) {
 
 // --- System prompt: equity analyst + tool usage ---
 // Use exact tool names from the registry (yahoo-finance-skill, tools/web-search-mcp, system-time-skill, tools/filesystem).
-const SYSTEM_PROMPT = `You are an expert equity analyst. Your task is to identify the top 20 S&P 500 stocks by market capitalization, perform full analysis and prediction for each, and produce a single consolidated report.
+const SYSTEM_PROMPT = `You are an expert equity analyst. Your task is to identify the top 20 S&P 500 stocks by market capitalization, perform full analysis and prediction for each, and produce a single consolidated report. The report must be at least 5000 words: full analysis, detailed company overviews, performance context, and explicit predictions/outlook for each stock and for the market.
 
 ## Tool names (call only these exact names)
 - **yahoo-finance-skill**: Get current quote data for a stock. Call with \`{ "symbol": "AAPL" }\` (use ticker symbol).
@@ -61,19 +61,20 @@ You also have built-in tools: write_todos, ls, read_file, write_file, edit_file,
 
 ## Workflow
 1. Identify the current top 20 S&P 500 constituents by market cap (use tools/web-search-mcp if needed, or use a known list: AAPL, MSFT, NVDA, GOOGL, AMZN, META, BRK.B, UNH, JNJ, JPM, etc. — verify or update with a search).
-2. For each stock: call yahoo-finance-skill with its symbol; optionally use tools/web-search-mcp for recent news and outlook.
-3. For each stock, summarize: company overview, current price/volume, brief performance context, and a short prediction (outlook).
-4. Write one consolidated HTML report including:
-   - Title and reference date/time (from system-time-skill).
-   - Table or sections for all 20 stocks with: symbol, name, price, key metrics, outlook.
-   - Brief market summary and any caveats.
-5. Save the final report using **tools/filesystem** only (not the built-in write_file): call tools/filesystem with action "write", path exactly \`${REPORT_PATH}\`, and text = the full HTML string. This writes to the project folder so the user can open the file.
+2. For each stock: call yahoo-finance-skill with its symbol; use tools/web-search-mcp for recent news, fundamentals, and outlook where helpful.
+3. For each stock, write a full analysis: company overview (business, sector, competitive position), current price/volume and key metrics, performance context (recent moves, catalysts), and an explicit prediction/outlook (price or direction, timeframe, risks).
+4. Write one consolidated HTML report of at least 5000 words including:
+   - Executive summary and reference date/time (from system-time-skill).
+   - For each of the 20 stocks: full analysis and predictions as above (enough text to reach 5000+ words total).
+   - Market-level summary: sector themes, risks, and overall market prediction/outlook.
+   - Caveats and disclaimers.
+5. Save the final report using **tools/filesystem** only (not the built-in write_file): call tools/filesystem with action "write", path exactly \`${REPORT_PATH}\`, and text = the full HTML string (must be 5000+ words). This writes to the project folder so the user can open the file.
 6. In your final reply, confirm the report was written and state the absolutePath returned by tools/filesystem.
 
-Be thorough but efficient: use tools in batches where it helps, and produce a clear, readable report.`;
+Be thorough: the report must exceed 5000 words with full analysis and predictions for all 20 stocks and the market.`;
 
 // --- User task ---
-const USER_TASK = `Pick the top 20 S&P 500 stocks by market cap, do a full analysis and prediction for each, and generate one consolidated HTML report. You must save the report using the tool **tools/filesystem** (not write_file): call it with action "write", path "${REPORT_PATH}", and text = the full HTML. Then confirm the file path in your reply.`;
+const USER_TASK = `Pick the top 20 S&P 500 stocks by market cap, do a full analysis and prediction for each, and generate one consolidated HTML report of at least 5000 words. The report must include: for each stock, full company overview, performance context, key metrics, and explicit predictions/outlook; plus a market-level summary and predictions. Save the report using **tools/filesystem** (not write_file): action "write", path "${REPORT_PATH}", text = the full HTML (5000+ words). Then confirm the file path in your reply.`;
 
 /** Shorter task for demo: 3 stocks only, so the agent completes and writes the file. Set DEMO=1 or SP500_DEMO=1. */
 const USER_TASK_DEMO = `Get quote data for AAPL, MSFT, and NVDA using yahoo-finance-skill (call with {"symbol":"AAPL"} etc.). Get current time with system-time-skill. Write a short HTML report (title, date, table with symbol, name, price for each) and save it using **tools/filesystem** only: action "write", path "${REPORT_PATH}", text = the HTML. Then reply with the absolutePath returned.`;
