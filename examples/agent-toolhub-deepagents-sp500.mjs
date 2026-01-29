@@ -74,10 +74,13 @@ You also have built-in tools: write_todos, ls, read_file, write_file, edit_file,
 Be thorough: the report must exceed 5000 words with full analysis and predictions for all 20 stocks and the market.`;
 
 // --- User task ---
-const USER_TASK = `Pick the top 20 S&P 500 stocks by market cap, do a full analysis and prediction for each, and generate one consolidated HTML report of at least 5000 words. The report must include: for each stock, full company overview, performance context, key metrics, and explicit predictions/outlook; plus a market-level summary and predictions. Save the report using **tools/filesystem** (not write_file): action "write", path "${REPORT_PATH}", text = the full HTML (5000+ words). Then confirm the file path in your reply.`;
+const USER_TASK = `Pick the top 20 S&P 500 stocks by market cap, do a full analysis and prediction for each, and generate one consolidated HTML report. The report body text must be at least 5000 words: for each stock write a full company overview (business, sector, competitive position), performance context, key metrics, and explicit predictions/outlook; add an executive summary and a market-level summary with predictions. Before saving, ensure the report content exceeds 5000 words—add more detailed analysis if needed. Save using **tools/filesystem** (not write_file): action "write", path "${REPORT_PATH}", text = the full HTML. Then confirm the file path in your reply.`;
 
 /** Shorter task for demo: 3 stocks only, so the agent completes and writes the file. Set DEMO=1 or SP500_DEMO=1. */
 const USER_TASK_DEMO = `Get quote data for AAPL, MSFT, and NVDA using yahoo-finance-skill (call with {"symbol":"AAPL"} etc.). Get current time with system-time-skill. Write a short HTML report (title, date, table with symbol, name, price for each) and save it using **tools/filesystem** only: action "write", path "${REPORT_PATH}", text = the HTML. Then reply with the absolutePath returned.`;
+
+/** Long demo: 3 stocks but report must be at least 1500 words (full analysis and predictions per stock). Set DEMO=1 and LONG_REPORT=1. */
+const USER_TASK_DEMO_LONG = `Get quote data for AAPL, MSFT, and NVDA using yahoo-finance-skill (call with {"symbol":"AAPL"}, {"symbol":"MSFT"}, {"symbol":"NVDA"}). Get current time with system-time-skill. Write a detailed HTML report of at least 1500 words: for each stock include a full company overview (business, sector, competitive position), current price and key metrics, performance context, and explicit predictions/outlook; add an executive summary and a short market summary. The report body text must exceed 1500 words. Save it using **tools/filesystem** only: action "write", path "${REPORT_PATH}", text = the full HTML. Then reply with the absolutePath returned.`;
 
 async function main() {
   const cwd = process.cwd();
@@ -114,8 +117,9 @@ async function main() {
   };
 
   const useDemo = process.env.DEMO === "1" || process.env.SP500_DEMO === "1";
-  const task = useDemo ? USER_TASK_DEMO : USER_TASK;
-  if (useDemo) console.log("Demo mode: 3 stocks, short report.\n");
+  const useLongReport = process.env.LONG_REPORT === "1" || process.env.LONG_REPORT === "true";
+  const task = useDemo ? (useLongReport ? USER_TASK_DEMO_LONG : USER_TASK_DEMO) : USER_TASK;
+  if (useDemo) console.log(useLongReport ? "Demo mode: 3 stocks, long report (1500+ words).\n" : "Demo mode: 3 stocks, short report.\n");
 
   try {
     const result = await agent.invoke(

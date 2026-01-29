@@ -137,6 +137,6 @@ npm run build
 npm run example:agent-toolhub-deepagents-sp500
 ```
 
-For a quick run that writes the report file (3 stocks): `npm run example:agent-toolhub-deepagents-sp500:demo` or `DEMO=1 npm run example:agent-toolhub-deepagents-sp500`. Report path: `examples/output/sp500-top20-report.html`. Optional env: `OPENAI_BASE_URL`, `OPENAI_MODEL`, `OPENAI_API_KEY`, `RECURSION_LIMIT`, `DEMO` (or `SP500_DEMO=1`).
+Quick run that writes the report (3 stocks, short): `npm run example:agent-toolhub-deepagents-sp500:demo`. Long report in demo (3 stocks, 1500+ words): `npm run example:agent-toolhub-deepagents-sp500:demo:long` or `DEMO=1 LONG_REPORT=1 npm run example:agent-toolhub-deepagents-sp500`. Full run (20 stocks, 5000+ words) may need higher `RECURSION_LIMIT`. Report path: `examples/output/sp500-top20-report.html`. Optional env: `OPENAI_BASE_URL`, `OPENAI_MODEL`, `OPENAI_API_KEY`, `RECURSION_LIMIT`, `DEMO`, `LONG_REPORT`.
 
 Requires devDependencies: `deepagents`, `langchain`, `@langchain/openai`, `zod`. If you see peer dependency conflicts (e.g. with `@easynet/n8n-local`), run `npm install --legacy-peer-deps`.
