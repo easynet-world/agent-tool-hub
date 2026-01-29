@@ -4,6 +4,9 @@ import yaml from "js-yaml";
 import type { ToolHubInitOptions } from "../tool-hub/ToolHub.js";
 import type { CoreToolsUserConfig } from "../core-tools/CoreToolsModule.js";
 
+/** Default config filename used when no path is given (e.g. AgentToolHub(), CLI). */
+export const DEFAULT_CONFIG_FILE = "toolhub.yaml";
+
 export interface ToolHubConfigLoadResult {
   configPath: string;
   rawConfig: unknown;

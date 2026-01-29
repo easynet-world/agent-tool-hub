@@ -115,17 +115,14 @@ npx agent-tool-hub list    # list discovered tools
 
 ### In code
 
-Load from config, init, then invoke:
+Recommended — create and init in one call:
 
 ```ts
-import { createToolHubAndInitFromConfig } from "@easynet/agent-tool-hub";
+import { createAgentToolHub } from "@easynet/agent-tool-hub";
 
-const hub = await createToolHubAndInitFromConfig("toolhub.yaml");
-const result = await hub.invokeTool("utils.calculator", { expression: "1 + 2" });
-// result.ok, result.data, result.error, etc.
+const toolHub = await createAgentToolHub("toolhub.yaml");
+const result = await toolHub.invokeTool("utils.calculator", { expression: "1 + 2" });
 ```
-
-Or build the hub yourself: `createToolHub(options)` → `await hub.initAllTools()`; run tools with `hub.invokeTool(name, args, options)`.
 
 ---
 
