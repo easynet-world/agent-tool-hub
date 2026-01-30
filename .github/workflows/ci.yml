@@ -11,6 +11,7 @@ jobs:
   test:
     name: Test & Build
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,7 +26,7 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Install n8n-local (for integration tests)
-        run: npm install @easynet/n8n-local@0.0.37 --legacy-peer-deps
+        run: npm install @easynet/n8n-local@0.0.37 --legacy-peer-deps --no-save
 
       - name: Run tests
         run: npm test
