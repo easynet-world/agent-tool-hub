@@ -37,7 +37,7 @@ npx agent-toolhub-react-stock GOOGL
 
 Pass the ticker symbol (e.g. `GOOGL`, `AAPL`, `MSFT`). **Configure your own LLM** — point the example to your OpenAI-compatible API (base URL and API key) in [examples/agent-toolhub-react-stock.mjs](examples/agent-toolhub-react-stock.mjs) or via env (e.g. `OPENAI_API_KEY`, `OPENAI_BASE_URL`). The bundled example uses placeholder values; replace them with your model endpoint.
 
-Output: console step-by-step progress + an HTML report (e.g. `GOOGL-research-report.html`) in the current directory. See a sample report: [docs/AAPL-research-report.html](docs/AAPL-research-report.html).
+Output: console step-by-step progress + an HTML report (e.g. `GOOGL-research-report.html`) in the current directory. See a sample report: [easynet-world.github.io/agent-tool-hub/AAPL-research-report.html](https://easynet-world.github.io/agent-tool-hub/AAPL-research-report.html).
 
 **Agent Run Report** — The generated HTML report is a highlight: it shows system/user prompts, the rendered Markdown report, and a Debug tab with step-by-step execution and token usage.
 
