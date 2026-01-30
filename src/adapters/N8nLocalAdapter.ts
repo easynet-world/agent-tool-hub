@@ -77,18 +77,46 @@ export class N8nLocalAdapter implements ToolAdapter {
   private getWorkflowApi(instance: N8nLocalInstance): N8nLocalInstance["workflow"] {
     const raw = instance as unknown as Record<string, unknown>;
     const candidates = [
-      raw.workflowManager,
       raw.workflow,
+      raw.workflowManager,
       (raw.serverManager as Record<string, unknown>)?.workflow,
       (raw.managers as Record<string, unknown>)?.workflow,
     ].filter(Boolean);
     for (const api of candidates) {
-      const a = api as { listWorkflows?: unknown };
-      if (a && typeof a.listWorkflows === "function") return api as N8nLocalInstance["workflow"];
+      const a = api as Record<string, unknown>;
+      if (!a) continue;
+      if (typeof a.listWorkflows === "function") return api as N8nLocalInstance["workflow"];
+      // n8n internal workflowManager may expose getWorkflows/getAll instead of listWorkflows
+      const listFn = a.listWorkflows ?? a.getWorkflows ?? a.getAll;
+      if (typeof listFn === "function") {
+        return {
+          listWorkflows: (opts?: unknown) =>
+            Promise.resolve(listFn.call(a, opts)).then((ws: unknown) =>
+              Array.isArray(ws)
+                ? (ws as { id?: unknown; name?: string }[]).map((w) => ({
+                    id: w.id,
+                    name: typeof w.name === "string" ? w.name : String(w.id ?? ""),
+                  }))
+                : []
+            ),
+          importWorkflow:
+            typeof a.importWorkflow === "function"
+              ? (w: unknown) => Promise.resolve(a.importWorkflow!.call(a, w))
+              : typeof a.create === "function"
+                ? (w: unknown) => Promise.resolve(a.create!.call(a, w)).then((r: { id?: unknown }) => ({ id: r?.id }))
+                : () => Promise.reject(new Error(`${N8N_LOCAL_PKG} workflow API has no importWorkflow/create`)),
+          updateWorkflow:
+            typeof a.updateWorkflow === "function"
+              ? (id: unknown, w: unknown) => Promise.resolve(a.updateWorkflow!.call(a, id, w))
+              : typeof a.update === "function"
+                ? (id: unknown, w: unknown) => Promise.resolve(a.update!.call(a, id, w))
+                : () => Promise.reject(new Error(`${N8N_LOCAL_PKG} workflow API has no updateWorkflow/update`)),
+        } as N8nLocalInstance["workflow"];
+      }
     }
     const keys = Object.keys(raw).filter((k) => typeof raw[k] === "object" || typeof raw[k] === "function");
     throw new Error(
-      `${N8N_LOCAL_PKG} API mismatch: no workflow API with listWorkflows found. Instance keys: ${keys.join(", ") || "(none)"}. Ensure @easynet/n8n-local is a compatible version.`
+      `${N8N_LOCAL_PKG} API mismatch: no workflow API with listWorkflows/getWorkflows found. Instance keys: ${keys.join(", ") || "(none)"}. Ensure @easynet/n8n-local is a compatible version.`
     );
   }
 
