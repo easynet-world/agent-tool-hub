@@ -1,6 +1,6 @@
 {
   "name": "@easynet/agent-tool-hub",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Agent Tool Hub: multi-protocol tool registry, PTC runtime, and adapter layer for MCP/LangChain/n8n/SKILL",
   "type": "module",
   "main": "./dist/index.cjs",
