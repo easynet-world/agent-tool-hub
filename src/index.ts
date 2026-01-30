@@ -100,11 +100,7 @@ export type {
   N8nAdapterOptions,
   N8nInvokeMode,
 } from "./adapters/N8nAdapter.js";
-export { N8nLocalAdapter } from "./adapters/N8nLocalAdapter.js";
-export type {
-  N8nLocalAdapterOptions,
-  N8nLocalInstance,
-} from "./adapters/N8nLocalAdapter.js";
+export type { N8nLocalAdapterOptions, N8nLocalInstance } from "./adapters/N8nLocalAdapter.js";
 export { ComfyUIAdapter } from "./adapters/ComfyUIAdapter.js";
 export type {
   ComfyUIHttpClient,

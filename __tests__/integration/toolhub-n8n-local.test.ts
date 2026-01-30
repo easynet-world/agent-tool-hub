@@ -3,7 +3,18 @@ import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:net";
+import { createRequire } from "node:module";
 import { createToolHub } from "../../src/tool-hub/ToolHub.js";
+
+const require = createRequire(import.meta.url);
+const hasN8nLocal = ((): boolean => {
+  try {
+    require.resolve("@easynet/n8n-local");
+    return true;
+  } catch {
+    return false;
+  }
+})();
 
 const findAvailablePort = async (startPort = 23000): Promise<number> => {
   return new Promise((resolve, reject) => {
@@ -18,7 +29,7 @@ const findAvailablePort = async (startPort = 23000): Promise<number> => {
   });
 };
 
-describe("ToolHub n8n-local real integration", () => {
+describe.skipIf(!hasN8nLocal)("ToolHub n8n-local real integration", () => {
   let toolsRoot: string;
   let dataDir: string;
   let toolHub: ReturnType<typeof createToolHub>;

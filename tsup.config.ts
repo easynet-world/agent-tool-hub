@@ -3,6 +3,7 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: [
     "src/index.ts",
+    "src/n8n-local.ts",
     "src/llm-export.ts",
     "src/toolhub-runtime.ts",
     "src/langchain-tools.ts",

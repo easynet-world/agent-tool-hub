@@ -20,6 +20,11 @@
       "types": "./dist/langchain-tools.d.ts",
       "import": "./dist/langchain-tools.js",
       "require": "./dist/langchain-tools.cjs"
+    },
+    "./n8n-local": {
+      "types": "./dist/n8n-local.d.ts",
+      "import": "./dist/n8n-local.js",
+      "require": "./dist/n8n-local.cjs"
     }
   },
   "files": [

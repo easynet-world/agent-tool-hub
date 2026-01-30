@@ -26,10 +26,24 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Install n8n-local (for integration tests)
-        run: npm install @easynet/n8n-local@0.0.37 --legacy-peer-deps
+        run: |
+          for i in 1 2 3; do
+            if npm install @easynet/n8n-local@0.0.37 --legacy-peer-deps; then
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "All 3 attempts to install @easynet/n8n-local failed"
+          exit 1
 
       - name: Verify n8n-local installed
-        run: test -d node_modules/@easynet/n8n-local || (echo "ERROR: @easynet/n8n-local not in node_modules" && exit 1)
+        run: |
+          if [ ! -d node_modules/@easynet/n8n-local ]; then
+            echo "ERROR: @easynet/n8n-local not in node_modules"
+            npm ls @easynet/n8n-local 2>&1 || true
+            exit 1
+          fi
 
       - name: Run tests
         run: npm test -- --testTimeout=180000 --reporter=verbose
