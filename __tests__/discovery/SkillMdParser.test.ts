@@ -139,6 +139,63 @@ allowed-tools: Bash(git:*) Read
     expect(result.frontmatter.compatibility).toBe("Requires git and docker");
     expect(result.frontmatter.allowedTools).toBe("Bash(git:*) Read");
   });
+
+  it("parses nested metadata (nested YAML)", () => {
+    const content = `---
+name: meta-skill
+description: Skill with nested metadata
+metadata:
+  author: Jane Doe
+  version: "1.0"
+  tags: experimental
+---
+
+# Body
+`;
+
+    const result = parseSkillMd(content, "/test/SKILL.md");
+    expect(result.frontmatter.name).toBe("meta-skill");
+    expect(result.frontmatter.metadata).toBeDefined();
+    expect(result.frontmatter.metadata).toEqual({
+      author: "Jane Doe",
+      version: "1.0",
+      tags: "experimental",
+    });
+  });
+
+  it("parses nested metadata with number and boolean values (stringified)", () => {
+    const content = `---
+name: meta-types
+description: Metadata with mixed types
+metadata:
+  version: 2
+  enabled: true
+  label: Hello
+---
+
+# Body
+`;
+
+    const result = parseSkillMd(content, "/test/SKILL.md");
+    expect(result.frontmatter.metadata).toEqual({
+      version: "2",
+      enabled: "true",
+      label: "Hello",
+    });
+  });
+
+  it("omits metadata when not present", () => {
+    const content = `---
+name: no-meta
+description: No metadata field
+---
+
+# Body
+`;
+
+    const result = parseSkillMd(content, "/test/SKILL.md");
+    expect(result.frontmatter.metadata).toBeUndefined();
+  });
 });
 
 describe("validateFrontmatter", () => {

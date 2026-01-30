@@ -1,9 +1,13 @@
-import { resolve } from "node:path";
+import { resolve, join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createAgent } from "langchain";
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage } from "@langchain/core/messages";
 import { createAgentToolHub } from "../dist/langchain-tools.js";
 import { writeReportFromStream, formatStepProgress } from "../dist/index.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CONFIG_PATH = join(__dirname, "toolhub.yaml");
 
 const SYMBOL = (process.argv[2] || "AAPL").toUpperCase();
 const cwd = process.cwd();
@@ -21,8 +25,8 @@ const SYSTEM_PROMPT = `You are an expert equity analyst. Perform **deep research
 const USER_TASK = `Perform deep research on stock/company "${SYMBOL}": investigate, analyze, speculate. Produce a detailed Markdown report (≥2000 words) and confirm.`;
 
 async function main() {
-  // 1. Create ToolHub runtime
-  const toolHub = await createAgentToolHub("examples/toolhub.yaml");
+  // 1. Create ToolHub runtime (config path is next to this script so it works from npm install)
+  const toolHub = await createAgentToolHub(CONFIG_PATH);
 
   // 2. Create LangChain agent (regular LangChain usage)
   const agent = createAgent({

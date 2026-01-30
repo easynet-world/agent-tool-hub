@@ -12,19 +12,24 @@ export const AGENT_REPORT_TEMPLATE = `<!DOCTYPE html>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
   <style>
     :root {
-      --report-bg: #f4f5f7;
+      --report-bg: #f0f4f8;
       --report-surface: #ffffff;
       --report-border: #e2e6ea;
       --report-border-light: #eef0f2;
       --report-text: #2c3e50;
       --report-text-muted: #5c6b7a;
-      --report-accent: #4a5f7f;
-      --report-accent-bg: #f0f3f7;
-      --report-code-bg: #f1f3f5;
-      --report-prompt-bg: #f8f9fb;
-      --report-heading: #3d5166;
-      --report-tint: #e8ecf2;
-      --report-table-head: #eef2f7;
+      --report-accent: #2563eb;
+      --report-accent-hover: #1d4ed8;
+      --report-accent-bg: #eff6ff;
+      --report-secondary: #059669;
+      --report-secondary-bg: #ecfdf5;
+      --report-code-bg: #f1f5f9;
+      --report-prompt-bg: #f8fafc;
+      --report-heading: #1e40af;
+      --report-heading-alt: #047857;
+      --report-tint: #e0e7ff;
+      --report-table-head: #dbeafe;
+      --report-table-head-text: #1e3a8a;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -34,25 +39,25 @@ export const AGENT_REPORT_TEMPLATE = `<!DOCTYPE html>
       line-height: 1.55;
     }
     .report-header {
-      background: var(--report-surface);
-      border-bottom: 2px solid var(--report-accent);
-      box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+      background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+      border-bottom: 3px solid var(--report-accent);
+      box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
     }
     .report-title {
       font-weight: 600;
-      color: var(--report-text);
+      color: var(--report-accent);
       font-size: 1.1rem;
       letter-spacing: -0.01em;
     }
     .report-header .form-label {
-      color: var(--report-text-muted);
+      color: var(--report-secondary);
       font-weight: 600;
       letter-spacing: 0.02em;
     }
     .prompt-block {
       background: var(--report-prompt-bg);
-      border: 1px solid var(--report-border-light);
-      border-left: 3px solid var(--report-accent);
+      border: 1px solid var(--report-tint);
+      border-left: 4px solid var(--report-accent);
       border-radius: 6px;
       font-size: 0.9rem;
       word-break: break-word;
@@ -60,31 +65,31 @@ export const AGENT_REPORT_TEMPLATE = `<!DOCTYPE html>
     }
     .prompt-block.markdown-body { white-space: normal; padding: 1rem 1.25rem; }
     .nav-tabs {
-      border-bottom: 1px solid var(--report-border);
+      border-bottom: 2px solid var(--report-border);
     }
     .nav-tabs .nav-link {
       color: var(--report-text-muted);
       font-weight: 500;
       border: none;
       padding: 0.5rem 1rem 0.6rem;
-      margin-bottom: -1px;
+      margin-bottom: -2px;
     }
     .nav-tabs .nav-link:hover { color: var(--report-accent); }
     .nav-tabs .nav-link.active {
       color: var(--report-accent);
       border-bottom: 2px solid var(--report-accent);
-      background: transparent;
+      background: var(--report-accent-bg);
     }
     .card {
       background: var(--report-surface);
       border: 1px solid var(--report-border-light);
-      border-radius: 6px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
     .card-header {
       background: var(--report-surface);
-      border-bottom: 1px solid var(--report-border-light);
-      color: var(--report-text);
+      border-bottom: 1px solid var(--report-tint);
+      color: var(--report-heading);
       font-weight: 600;
     }
     .step-tree { list-style: none; padding-left: 0; }
@@ -95,7 +100,7 @@ export const AGENT_REPORT_TEMPLATE = `<!DOCTYPE html>
       border-left: 3px solid transparent;
       color: var(--report-text);
     }
-    .step-tree .step-item:hover { background: var(--report-prompt-bg); }
+    .step-tree .step-item:hover { background: var(--report-accent-bg); }
     .step-tree .step-item.active {
       background: var(--report-accent-bg);
       border-left-color: var(--report-accent);
@@ -110,7 +115,7 @@ export const AGENT_REPORT_TEMPLATE = `<!DOCTYPE html>
     }
     .detail-section { margin-bottom: 1rem; }
     .detail-section h6 {
-      color: var(--report-text-muted);
+      color: var(--report-secondary);
       font-weight: 600;
       margin-bottom: 0.5rem;
       font-size: 0.8rem;
@@ -119,7 +124,7 @@ export const AGENT_REPORT_TEMPLATE = `<!DOCTYPE html>
     }
     .detail-pre {
       background: var(--report-code-bg);
-      border: 1px solid var(--report-border-light);
+      border: 1px solid var(--report-tint);
       padding: 1rem 1.25rem;
       border-radius: 4px;
       font-size: 0.8rem;
@@ -158,10 +163,10 @@ export const AGENT_REPORT_TEMPLATE = `<!DOCTYPE html>
     .markdown-body h3 {
       font-size: 1.0625rem;
       font-weight: 600;
-      color: var(--report-heading);
+      color: var(--report-heading-alt);
       margin: 1.25rem 0 0.4rem 0;
     }
-    .markdown-body h4 { font-size: 1rem; font-weight: 600; margin: 1rem 0 0.35rem 0; }
+    .markdown-body h4 { font-size: 1rem; font-weight: 600; margin: 1rem 0 0.35rem 0; color: var(--report-heading-alt); }
     .markdown-body p {
       margin: 0 0 0.75rem 0;
       font-size: 1rem;
@@ -176,18 +181,19 @@ export const AGENT_REPORT_TEMPLATE = `<!DOCTYPE html>
     }
     .markdown-body th, .markdown-body td {
       padding: 0.5rem 0.75rem;
-      border: 1px solid var(--report-border-light);
+      border: 1px solid var(--report-tint);
       text-align: left;
     }
     .markdown-body th {
       font-weight: 600;
       background: var(--report-table-head);
-      color: var(--report-heading);
-      border-color: var(--report-tint);
+      color: var(--report-table-head-text);
+      border-color: var(--report-accent);
     }
+    .markdown-body tbody tr:nth-child(even) { background: var(--report-secondary-bg); }
     .markdown-body pre, .markdown-body code {
       background: var(--report-code-bg);
-      border: 1px solid var(--report-border-light);
+      border: 1px solid var(--report-tint);
       border-radius: 4px;
       color: var(--report-text);
       font-size: 0.875rem;

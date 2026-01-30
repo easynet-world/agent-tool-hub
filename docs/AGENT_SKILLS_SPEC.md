@@ -35,7 +35,7 @@ So the spec is a **format + constraint** definition and a **recommended** usage 
 | **Optional fields** | license, compatibility, metadata, allowed-tools optional | ✅ Parse & store | We don’t *have* to enforce their *semantics* (see below). |
 | **allowed-tools** | “Experimental. Support for this field **may vary between agent implementations**.” | ✅ Enforced when set | When a skill calls `invokeTool`, we only allow tools listed in its `allowed-tools` frontmatter (space-delimited). If omitted or empty, any tool is allowed. |
 | **name = parent directory** | “Must match the parent directory name” | ❌ No | We skip this by design so skills can live in namespaced paths (e.g. `tools/foo/skill/`). |
-| **metadata (nested)** | Optional key-value map | ⚠️ Type only | We don’t parse nested YAML yet; no enforcement. |
+| **metadata (nested)** | Optional key-value map | ✅ Parsed | Nested YAML metadata is parsed and normalized to `Record<string, string>`. |
 
 So: we **do** enforce format and required constraints (name, description, compatibility length) and **allowed-tools** when a skill invokes sub-tools. We **do not** enforce parent-dir name (we intentionally deviate for namespaced discovery).
 
@@ -64,7 +64,7 @@ So: we **do** enforce format and required constraints (name, description, compat
 | **description** | Yes | Max 1024 chars; non-empty | ✅ |
 | **license** | No | License name or reference | ✅ Parsed and stored in `SkillFrontmatter.license`. |
 | **compatibility** | No | Max 500 chars; environment requirements | ✅ Parsed, stored, validated (max 500). |
-| **metadata** | No | Arbitrary key-value map (string → string) | ⚠️ Type present (`SkillFrontmatter.metadata`); **nested YAML not parsed** (only flat key: value). |
+| **metadata** | No | Arbitrary key-value map (string → string) | ✅ Parsed. Nested YAML is supported; values are normalized to strings. |
 | **allowed-tools** | No | Space-delimited list of pre-approved tools (experimental) | ✅ Parsed and stored; **enforced** when the skill calls `invokeTool`: only tools in this list may be invoked. If omitted or empty, any tool is allowed. |
 
 **Name validation (aligned with spec):**
@@ -140,17 +140,14 @@ We do not require these folder names; we scan the whole skill directory and infe
 
 ## Gaps / Limitations
 
-1. **metadata (nested YAML)**  
-   The spec allows `metadata: { author: "...", version: "..." }`. We only parse flat key-value frontmatter; nested `metadata` is not parsed. Workaround: use a single string value or add support for a small nested block later.
-
-2. **Name must match parent directory**  
+1. **Name must match parent directory**  
    We intentionally do not enforce that `name` equals the parent directory name, so that skills can live under namespaced discovery paths (e.g. `tools/foo/skill/`).
 
-3. **Validation tooling**  
+2. **Validation tooling**  
    The spec references `skills-ref validate ./my-skill`. We do not ship a CLI validator; our validation runs at load time (frontmatter and name rules).
 
 ---
 
 ## Summary
 
-We support the core Agent Skills format: required and optional frontmatter (including `license`, `compatibility`, `allowed-tools`), strict name/description validation, progressive disclosure (Level 1–3), instruction-only and handler modes, and resource access. We **enforce** `allowed-tools` when a skill calls `invokeTool`: only tools listed in that frontmatter (space-delimited) may be invoked; if omitted or empty, any tool is allowed. Remaining gaps are nested `metadata` parsing and no parent-dir name check by design.
+We support the core Agent Skills format: required and optional frontmatter (including `license`, `compatibility`, `allowed-tools`), strict name/description validation, progressive disclosure (Level 1–3), instruction-only and handler modes, and resource access. We **enforce** `allowed-tools` when a skill calls `invokeTool`: only tools listed in that frontmatter (space-delimited) may be invoked; if omitted or empty, any tool is allowed. Remaining gap is no parent-dir name check by design.

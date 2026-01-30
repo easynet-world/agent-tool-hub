@@ -1,5 +1,6 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join, extname, relative } from "node:path";
+import yaml from "js-yaml";
 import type {
   SkillDefinition,
   SkillFrontmatter,
@@ -62,110 +63,97 @@ export function parseSkillMd(
   const yamlBlock = trimmed.slice(4, endIndex).trim();
   const body = trimmed.slice(endIndex + 4).trim();
 
-  // Parse simple YAML (name: value pairs)
-  const raw = parseSimpleYaml(yamlBlock, filePath) as Record<string, string | undefined>;
+  let raw: Record<string, unknown>;
+  try {
+    const parsed = yaml.load(yamlBlock);
+    if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new SkillManifestError(
+        filePath,
+        "frontmatter",
+        "YAML frontmatter must be an object (key: value)",
+      );
+    }
+    raw = parsed as Record<string, unknown>;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new SkillManifestError(
+      filePath,
+      "frontmatter",
+      `Invalid YAML frontmatter: ${message}`,
+    );
+  }
+
+  const name = stringField(raw, "name", filePath);
+  const description = stringField(raw, "description", filePath);
+  if (!name || !description) {
+    throw new SkillManifestError(
+      filePath,
+      "frontmatter",
+      !name ? "name is required" : "description is required",
+    );
+  }
+
+  const license = stringField(raw, "license");
+  const compatibility = stringField(raw, "compatibility");
+  const allowedTools = stringField(raw, "allowed-tools");
+  const metadata = normalizeMetadata(raw.metadata);
+
   const frontmatter: SkillFrontmatter = {
-    name: raw.name!,
-    description: raw.description!,
-    ...(raw.license != null && raw.license !== "" && { license: raw.license }),
-    ...(raw.compatibility != null && raw.compatibility !== "" && { compatibility: raw.compatibility }),
-    ...(raw["allowed-tools"] != null && raw["allowed-tools"] !== "" && { allowedTools: raw["allowed-tools"] }),
+    name,
+    description,
+    ...(license && { license }),
+    ...(compatibility && { compatibility }),
+    ...(allowedTools && { allowedTools }),
+    ...(metadata && Object.keys(metadata).length > 0 && { metadata }),
   };
   validateFrontmatter(frontmatter, filePath);
 
   return { frontmatter, instructions: body };
 }
 
+function stringField(
+  raw: Record<string, unknown>,
+  key: string,
+  filePath?: string,
+): string {
+  const v = raw[key];
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (Array.isArray(v)) {
+    return v.map((x) => (typeof x === "string" ? x : String(x))).join("\n");
+  }
+  if (filePath) {
+    throw new SkillManifestError(
+      filePath,
+      "frontmatter",
+      `Frontmatter field "${key}" must be a string, number, boolean, or array`,
+    );
+  }
+  return String(v);
+}
+
 /**
- * Minimal YAML parser for frontmatter fields.
- * Handles: simple key: value pairs, quoted strings, multiline with |/>.
- * Does NOT handle: nested objects, arrays, anchors, etc.
+ * Normalize frontmatter `metadata` to Record<string, string>.
+ * Supports nested YAML: { author: "...", version: "..." } → flat string values.
  */
-function parseSimpleYaml(
-  yaml: string,
-  _filePath: string,
-): Partial<SkillFrontmatter> {
-  const result: Record<string, string> = {};
-  const lines = yaml.split("\n");
-
-  let currentKey: string | null = null;
-  let multilineValue: string[] = [];
-  let multilineMode: "literal" | "folded" | null = null;
-
-  for (const line of lines) {
-    // Check if this is a new key: value pair
-    const kvMatch = line.match(/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)/);
-
-    if (kvMatch && multilineMode === null) {
-      // Flush previous multiline if any
-      if (currentKey && multilineValue.length > 0) {
-        result[currentKey] = multilineValue.join(
-          multilineMode === "folded" ? " " : "\n",
-        );
-        multilineValue = [];
-      }
-
-      const key = kvMatch[1]!;
-      const value = (kvMatch[2] ?? "").trim();
-
-      if (value === "|") {
-        currentKey = key;
-        multilineMode = "literal";
-      } else if (value === ">") {
-        currentKey = key;
-        multilineMode = "folded";
-      } else {
-        // Simple value — strip quotes if present
-        result[key] = stripQuotes(value);
-        currentKey = null;
-      }
-    } else if (multilineMode !== null && currentKey) {
-      // Continuation of multiline value
-      if (line.match(/^\s/) || line === "") {
-        multilineValue.push(line.replace(/^\s{2}/, ""));
-      } else {
-        // End of multiline block, process this line as new key
-        result[currentKey] = multilineValue.join(
-          multilineMode === "literal" ? "\n" : " ",
-        ).trim();
-        multilineValue = [];
-        multilineMode = null;
-
-        const newKv = line.match(/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)/);
-        if (newKv) {
-          const newKey = newKv[1]!;
-          const val = (newKv[2] ?? "").trim();
-          if (val === "|") {
-            currentKey = newKey;
-            multilineMode = "literal";
-          } else if (val === ">") {
-            currentKey = newKey;
-            multilineMode = "folded";
-          } else {
-            result[newKey] = stripQuotes(val);
-            currentKey = null;
-          }
-        }
+function normalizeMetadata(val: unknown): Record<string, string> | undefined {
+  if (val == null) return undefined;
+  if (typeof val === "object" && !Array.isArray(val)) {
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(val)) {
+      if (typeof k === "string" && v !== undefined && v !== null) {
+        out[k] = typeof v === "object" ? JSON.stringify(v) : String(v);
       }
     }
+    return Object.keys(out).length ? out : undefined;
   }
-
-  // Flush final multiline
-  if (currentKey && multilineValue.length > 0) {
-    result[currentKey] = multilineValue.join(
-      multilineMode === "literal" ? "\n" : " ",
-    ).trim();
+  if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") {
+    return { value: String(val) };
   }
-
-  return result as Partial<SkillFrontmatter>;
+  return undefined;
 }
 
-function stripQuotes(s: string): string {
-  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-    return s.slice(1, -1);
-  }
-  return s;
-}
 
 /**
  * Scan a skill directory for bundled resource files (Level 3).
