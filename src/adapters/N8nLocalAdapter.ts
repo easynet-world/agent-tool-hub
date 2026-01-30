@@ -30,7 +30,8 @@ export interface N8nLocalAdapterOptions {
   debug?: DebugOptions;
 }
 
-const N8N_LOCAL_PKG = "@easynet/n8n-local";
+// Use runtime path so Vite/Vitest does not try to resolve at transform time (CI "Failed to load url")
+const N8N_LOCAL_PKG = "@easynet/" + "n8n-local";
 const N8N_LOCAL_HINT =
   "Install it with: npm install @easynet/n8n-local (or omit --omit=optional for full install).";
 
@@ -96,7 +97,7 @@ export class N8nLocalAdapter implements ToolAdapter {
     if (!this.instancePromise) {
       this.instancePromise = (async () => {
         try {
-          const mod = await import(/* @vite-ignore */ N8N_LOCAL_PKG);
+          const mod = await import(/* @vite-ignore */ N8N_LOCAL_PKG as string);
           const N8nLocal = mod.N8nLocal ?? mod.default;
           if (!N8nLocal) throw new Error(`${N8N_LOCAL_PKG} did not export N8nLocal`);
           this.instance = new N8nLocal() as N8nLocalInstance;
