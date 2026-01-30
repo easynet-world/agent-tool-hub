@@ -35,7 +35,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "npx tsup",
+    "build": "npx tsup && mkdir -p dist/report && cp src/report/agent-report-template.html dist/report/",
     "dev": "npx tsup --watch",
     "example:agent-toolhub": "node examples/agent-toolhub-example.mjs",
     "example:agent-toolhub-react-stock": "node --import tsx examples/agent-toolhub-react-stock.mjs",
@@ -50,11 +50,14 @@
     "deps:size": "du -sh node_modules/* 2>/dev/null | sort -hr | head -40"
   },
   "dependencies": {
+    "@langchain/core": "^1.1.17",
+    "@langchain/openai": "^1.2.3",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "cockatiel": "^3.2.1",
     "eventemitter3": "^5.0.1",
     "jmespath": "^0.16.0",
+    "langchain": "^1.2.7",
     "js-yaml": "^4.1.1",
     "mustache": "^4.2.0",
     "p-retry": "^6.2.1",

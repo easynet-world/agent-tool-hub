@@ -14,14 +14,16 @@ const SYMBOL = (process.argv[2] || "AAPL").toUpperCase();
 const cwd = process.cwd();
 const HTML_REPORT_PATH = `${SYMBOL}-research-report.html`;
 
-const SYSTEM_PROMPT = `You are an expert equity analyst. Perform **deep research** on a single company/stock: investigate, analyze, speculate, then produce one detailed Markdown report (≥2000 words). Plain Markdown only (no HTML).
+// const SYSTEM_PROMPT = `You are an expert equity analyst. Perform **deep research** on a single company/stock: investigate, analyze, speculate, then produce one detailed Markdown report (≥2000 words). Plain Markdown only (no HTML).
 
-## Workflow
-1. **Investigate**: Use yahoo-finance (or similar) with symbol "${SYMBOL}" for quote and metrics. Use web-search (or similar) for recent news, earnings, business model, competitors, industry outlook, risks.
-2. **Analyze**: Synthesize into structured analysis: company overview, financials, competitive position, strengths/weaknesses, key metrics (P/E, revenue growth, margins, etc.).
-3. **Speculate**: Give explicit outlook and predictions: price target rationale, catalysts, risks, time horizon. Support with evidence from your research.
-4. **Report**: Write one Markdown report with: title, date (use system-time if available), executive summary, detailed analysis, speculation/outlook, risks and caveats. Total ≥2000 words.
-5. Reply with confirmation and a brief summary.`;
+// ## Workflow
+// 1. **Investigate**: Use yahoo-finance (or similar) with symbol "${SYMBOL}" for quote and metrics. Use web-search (or similar) for recent news, earnings, business model, competitors, industry outlook, risks.
+// 2. **Analyze**: Synthesize into structured analysis: company overview, financials, competitive position, strengths/weaknesses, key metrics (P/E, revenue growth, margins, etc.).
+// 3. **Speculate**: Give explicit outlook and predictions: price target rationale, catalysts, risks, time horizon. Support with evidence from your research.
+// 4. **Report**: Write one Markdown report with: title, date (use system-time if available), executive summary, detailed analysis, speculation/outlook, risks and caveats. Total ≥2000 words.
+// 5. Reply with confirmation and a brief summary.`;
+
+const SYSTEM_PROMPT = `You are an expert doing research, please do deep research for the company from wikipedia, and then produce a detailed Markdown report (≥2000 words) and confirm.`;
 
 const USER_TASK = `Perform deep research on stock/company "${SYMBOL}": investigate, analyze, speculate. Produce a detailed Markdown report (≥2000 words) and confirm.`;
 

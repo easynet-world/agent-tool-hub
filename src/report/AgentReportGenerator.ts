@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import type {
   AgentReportData,
   AgentReportStep,
@@ -10,26 +11,37 @@ import type {
   StreamableAgent,
   WriteReportFromStreamOptions,
 } from "./types.js";
-import { AGENT_REPORT_TEMPLATE } from "./agent-report-template.js";
 
 const PLACEHOLDER = "__REPORT_DATA__";
 
+function getReportTemplateDir(): string {
+  if (typeof __dirname !== "undefined") return __dirname;
+  return dirname(fileURLToPath(import.meta.url));
+}
+
+/** Path to the default HTML template (dist/report/ when built, src/report/ in dev). */
+export const DEFAULT_REPORT_TEMPLATE_PATH = (() => {
+  const dir = getReportTemplateDir();
+  const nextToModule = join(dir, "agent-report-template.html");
+  if (existsSync(nextToModule)) return nextToModule;
+  return join(dir, "report", "agent-report-template.html");
+})();
+
 /**
  * Generate an HTML report from template and data.
- * Uses the built-in framework template when templatePath is not provided.
+ * Uses the built-in HTML template file when templatePath is not provided.
  *
  * @param data - Report data (prompts, markdown, steps)
  * @param options.outputPath - Path to write the HTML file (required)
- * @param options.templatePath - Path to a custom HTML template (optional; uses built-in if not set)
+ * @param options.templatePath - Path to a custom HTML template (optional; uses built-in file if not set)
  * @returns Path to the written file
  */
 export function generateAgentReport(
   data: AgentReportData,
   options: { outputPath: string; templatePath?: string }
 ): string {
-  const template = options.templatePath
-    ? readFileSync(options.templatePath, "utf8")
-    : AGENT_REPORT_TEMPLATE;
+  const templatePath = options.templatePath ?? DEFAULT_REPORT_TEMPLATE_PATH;
+  const template = readFileSync(templatePath, "utf8");
   let json = JSON.stringify(data);
   json = json.replace(/<\/script/gi, "<\\/script");
   const html = template.replace(PLACEHOLDER, json);
