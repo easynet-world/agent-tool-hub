@@ -26,7 +26,10 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Install n8n-local (for integration tests)
-        run: npm install @easynet/n8n-local@0.0.37 --legacy-peer-deps --no-save
+        run: npm install @easynet/n8n-local@0.0.37 --legacy-peer-deps
+
+      - name: Verify n8n-local installed
+        run: test -d node_modules/@easynet/n8n-local || (echo "ERROR: @easynet/n8n-local not in node_modules" && exit 1)
 
       - name: Run tests
         run: npm test -- --testTimeout=180000 --reporter=verbose

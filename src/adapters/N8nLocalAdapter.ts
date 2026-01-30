@@ -96,7 +96,7 @@ export class N8nLocalAdapter implements ToolAdapter {
     if (!this.instancePromise) {
       this.instancePromise = (async () => {
         try {
-          const mod = await import(N8N_LOCAL_PKG);
+          const mod = await import(/* @vite-ignore */ N8N_LOCAL_PKG);
           const N8nLocal = mod.N8nLocal ?? mod.default;
           if (!N8nLocal) throw new Error(`${N8N_LOCAL_PKG} did not export N8nLocal`);
           this.instance = new N8nLocal() as N8nLocalInstance;
