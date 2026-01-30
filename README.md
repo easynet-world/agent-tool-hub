@@ -8,7 +8,7 @@
 
 | Supported tools | How to write | Spec |
 |-----------------|--------------|------|
-| **SKILL** | We fully support the SKILL spec with any LLM.<br>[Examples](examples/tools/yahoo-finance/skill/)<br>[SKILL spec and our implementation support](docs/AGENT_SKILLS_SPEC.md) | [Agent Skills](https://agentskills.io/specification) |
+| **SKILL** | We fully support the SKILL spec with any LLM.<br>[Examples](examples/tools/yahoo-finance/skill/)<br>[SKILL spec and our implementation support](docs/AGENT_SKILLS_SPEC.md) | [Agent Skills (Anthropic)](https://docs.anthropic.com/en/docs/agents-and-tools/agent-skills/overview) |
 | **LangChain** | Export a `StructuredTool` in `langchain/`; we auto-discover.<br>[Examples](examples/tools/filesystem/langchain/) | [LangChain Tools](https://js.langchain.com/docs/modules/agents/tools/) |
 | **MCP** | Put `mcp.json` (Cursor-style) in `mcp/`; we connect as client.<br>We recommend [easy-mcp-server](https://www.npmjs.com/package/easy-mcp-server) for writing MCP servers.<br>[Example](examples/tools/web-search/mcp/) | [MCP Specification](https://modelcontextprotocol.io/specification/latest) |
 | **n8n** | Put workflow JSON in `n8n/`; we run local n8n.<br>[@easynet/n8n-local](https://www.npmjs.com/package/@easynet/n8n-local) | [n8n Workflows](https://docs.n8n.io/workflows/) |
