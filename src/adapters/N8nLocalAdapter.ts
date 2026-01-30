@@ -101,15 +101,20 @@ export class N8nLocalAdapter implements ToolAdapter {
             ),
           importWorkflow:
             typeof a.importWorkflow === "function"
-              ? (w: unknown) => Promise.resolve(a.importWorkflow!.call(a, w))
+              ? (w: unknown) => Promise.resolve((a.importWorkflow as (arg: unknown) => unknown)(w))
               : typeof a.create === "function"
-                ? (w: unknown) => Promise.resolve(a.create!.call(a, w)).then((r: { id?: unknown }) => ({ id: r?.id }))
+                ? (w: unknown) =>
+                    Promise.resolve((a.create as (arg: unknown) => unknown)(w)).then((r: unknown) => ({
+                      id: (r as { id?: unknown })?.id,
+                    }))
                 : () => Promise.reject(new Error(`${N8N_LOCAL_PKG} workflow API has no importWorkflow/create`)),
           updateWorkflow:
             typeof a.updateWorkflow === "function"
-              ? (id: unknown, w: unknown) => Promise.resolve(a.updateWorkflow!.call(a, id, w))
+              ? (id: unknown, w: unknown) =>
+                  Promise.resolve((a.updateWorkflow as (id: unknown, w: unknown) => unknown)(id, w))
               : typeof a.update === "function"
-                ? (id: unknown, w: unknown) => Promise.resolve(a.update!.call(a, id, w))
+                ? (id: unknown, w: unknown) =>
+                    Promise.resolve((a.update as (id: unknown, w: unknown) => unknown)(id, w))
                 : () => Promise.reject(new Error(`${N8N_LOCAL_PKG} workflow API has no updateWorkflow/update`)),
         } as N8nLocalInstance["workflow"];
       }

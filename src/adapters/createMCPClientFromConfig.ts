@@ -69,10 +69,10 @@ export async function createMCPClient(
   const wrapper: MCPClientLike = {
     listTools: async () => {
       const result = await client.listTools();
-      const tools = (result.tools ?? []).map((t) => ({
-        name: t.name,
+      const tools = (result.tools ?? []).map((t: { name?: string; description?: string; inputSchema?: unknown }) => ({
+        name: t.name ?? "",
         description: t.description,
-        inputSchema: t.inputSchema ?? { type: "object", properties: {} },
+        inputSchema: (t.inputSchema ?? { type: "object", properties: {} }) as object,
       }));
       return { tools };
     },
@@ -83,10 +83,10 @@ export async function createMCPClient(
       });
       const content = Array.isArray(result.content) ? result.content : [];
       return {
-        content: content.map((c) => ({
+        content: content.map((c: { type?: string; text?: string; data?: unknown }) => ({
           type: c.type ?? "text",
           text: c.text,
-          data: (c as { data?: unknown }).data,
+          data: c.data,
         })),
         isError: result.isError === true,
       };

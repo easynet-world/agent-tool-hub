@@ -64,6 +64,7 @@
   },
   "devDependencies": {
     "@langchain/core": "1.1.17",
+    "@modelcontextprotocol/sdk": "^1.0.0",
     "@langchain/openai": "1.2.3",
     "@semantic-release/git": "^10.0.1",
     "@types/jmespath": "^0.15.2",
