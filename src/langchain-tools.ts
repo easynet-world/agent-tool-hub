@@ -64,10 +64,20 @@ function extractToolArgs(args: unknown): Record<string, unknown> {
 }
 
 /**
+ * Sanitize tool name for LLM/API: slashes and chars that some backends mangle become underscores.
+ * Invoke still uses the original spec.name.
+ */
+function toolNameForLLM(name: string): string {
+  return name.replace(/[/.-]/g, "_");
+}
+
+/**
  * Converts a ToolHub (or AgentToolHub) registry into an array of LangChain tools.
  * Each tool delegates to hub.invokeTool(spec.name, args). Use with LangChain 1.x agents
  * (e.g. createDeepAgent from deepagents). Tool args are normalized: if the model
  * sends text + JSON (e.g. "reasoning{\"symbol\":\"AAPL\"}"), the JSON is extracted.
+ * Tool names are sanitized for the LLM (e.g. tools/yahoo-finance → tools_yahoo_finance)
+ * so OpenAI-compatible backends that mangle slashes still get a stable, matchable name.
  *
  * @param hub - Instance with getRegistry() and invokeTool(name, args)
  * @returns Array of LangChain tool instances (compatible with agent tools array)
@@ -76,7 +86,7 @@ export function toolHubToLangChainTools(hub: ToolHubLike): unknown[] {
   const specs = hub.getRegistry().snapshot();
   return specs.map((spec) => {
     const opts = {
-      name: spec.name,
+      name: toolNameForLLM(spec.name),
       description: spec.description ?? `Tool: ${spec.name}`,
       schema: TOOL_ARGS_SCHEMA,
     };

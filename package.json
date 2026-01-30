@@ -8,7 +8,7 @@
   "types": "./dist/index.d.ts",
   "bin": {
     "agent-tool-hub": "dist/cli.js",
-    "agent-toolhub-react-stock": "examples/agent-toolhub-react-stock.mjs"
+    "agent-toolhub-react-stock": "examples/agent-toolhub-react-stock-bin.cjs"
   },
   "exports": {
     ".": {
@@ -30,8 +30,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "npx tsup",
+    "dev": "npx tsup --watch",
     "example:agent-toolhub": "node examples/agent-toolhub-example.mjs",
     "example:agent-toolhub-react-stock": "node --import tsx examples/agent-toolhub-react-stock.mjs",
     "test": "vitest run",
@@ -53,6 +53,7 @@
     "mustache": "^4.2.0",
     "p-retry": "^6.2.1",
     "p-timeout": "^6.1.4",
+    "tsx": "^4.21.0",
     "uuid": "^11.0.5"
   },
   "devDependencies": {
@@ -67,7 +68,6 @@
     "langchain": "^1.0.0",
     "semantic-release": "^24.2.0",
     "tsup": "^8.3.5",
-    "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
     "zod": "^3.23.0"

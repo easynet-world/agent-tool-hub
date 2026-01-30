@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { resolve, join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createAgent } from "langchain";
