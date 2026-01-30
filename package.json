@@ -45,7 +45,6 @@
     "deps:size": "du -sh node_modules/* 2>/dev/null | sort -hr | head -40"
   },
   "dependencies": {
-    "@easynet/n8n-local": "^0.0.37",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "cockatiel": "^3.2.1",
