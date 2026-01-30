@@ -10,7 +10,7 @@ Define tools with simple, familiar formats: drop a folder under a configured roo
 
 | Supported tools | Folder | How to write | Spec |
 |-----------------|--------|--------------|------|
-| **SKILL** | `skill/` | We support all native SKILL spec features (frontmatter, body, handler, resources).<br>Example: [yahoo-finance/skill](examples/tools/yahoo-finance/skill/), [system-time/skill](examples/tools/system-time/skill/). | [Agent Skills](https://agentskills.io/specification) |
+| **SKILL** | `skill/` | We support all native SKILL spec features (frontmatter, body, handler, resources).<br>Example: [yahoo-finance/skill](examples/tools/yahoo-finance/skill/), [system-time/skill](examples/tools/system-time/skill/).<br>Our implementation vs spec: [AGENT_SKILLS_SPEC](docs/AGENT_SKILLS_SPEC.md). | [Agent Skills](https://agentskills.io/specification) |
 | **LangChain** | `langchain/` | Just write a LangChain `StructuredTool` class; we auto-discover it.<br>Example: [filesystem/langchain](examples/tools/filesystem/langchain/), [page-access/langchain](examples/tools/page-access/langchain/). | [LangChain Tools](https://js.langchain.com/docs/modules/agents/tools/) |
 | **MCP** | `mcp/` | We do not provide MCP server code; we provide an **MCP client** that connects to MCP servers. Config: Cursor-style JSON.<br>To write an MCP server, we recommend [easy-mcp-server](https://www.npmjs.com/package/easy-mcp-server).<br>Example: [web-search/mcp](examples/tools/web-search/mcp/). | [MCP Specification](https://modelcontextprotocol.io/specification/latest) |
 | **n8n** | `n8n/` | We run a local n8n server ([@easynet/n8n-local](https://www.npmjs.com/package/@easynet/n8n-local)) and call the instance directly—no API. | [n8n Workflows](https://docs.n8n.io/workflows/) |
@@ -81,7 +81,7 @@ Full examples for each tool type: [SKILL](#skill) · [LangChain](#langchain) · 
 
 ### SKILL
 
-Markdown spec + JS handler. Put under `skill/`:
+Markdown spec + JS handler. Put under `skill/`. Full spec compliance and implementation details: [docs/AGENT_SKILLS_SPEC.md](docs/AGENT_SKILLS_SPEC.md).
 
 ```yaml
 # skill/SKILL.md
