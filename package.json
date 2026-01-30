@@ -7,7 +7,8 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "agent-tool-hub": "dist/cli.js"
+    "agent-tool-hub": "dist/cli.js",
+    "agent-toolhub-react-stock": "examples/agent-toolhub-react-stock.mjs"
   },
   "exports": {
     ".": {
@@ -22,7 +23,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "examples"
   ],
   "publishConfig": {
     "access": "public"
