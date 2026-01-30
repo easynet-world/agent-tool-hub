@@ -5,3 +5,6 @@ dist
 toolhub.yaml
 # Generated example output (e.g. sp500-top20-report.html)
 examples/output/
+# Local PR / report drafts
+.pr-body.md
+PR_GENERATE.md
