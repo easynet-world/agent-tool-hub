@@ -25,7 +25,7 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Install n8n-local (for integration tests)
-        run: npm install @easynet/n8n-local --legacy-peer-deps
+        run: npm install @easynet/n8n-local@0.0.37 --legacy-peer-deps
 
       - name: Run tests
         run: npm test

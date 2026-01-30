@@ -72,12 +72,12 @@ export class N8nLocalAdapter implements ToolAdapter {
     this.logger = createLogger({ ...options.debug, prefix: "N8nLocalAdapter" });
   }
 
-  /** Resolve workflow API from @easynet/n8n-local instance. */
+  /** Resolve workflow API from @easynet/n8n-local instance (supports .workflow or .workflowManager). */
   private getWorkflowApi(instance: N8nLocalInstance): N8nLocalInstance["workflow"] {
-    const raw = instance as Record<string, unknown>;
+    const raw = instance as unknown as Record<string, unknown>;
     const candidates = [
-      raw.workflow,
       raw.workflowManager,
+      raw.workflow,
       (raw.serverManager as Record<string, unknown>)?.workflow,
       (raw.managers as Record<string, unknown>)?.workflow,
     ].filter(Boolean);
@@ -85,7 +85,7 @@ export class N8nLocalAdapter implements ToolAdapter {
       const a = api as { listWorkflows?: unknown };
       if (a && typeof a.listWorkflows === "function") return api as N8nLocalInstance["workflow"];
     }
-    const keys = Object.keys(raw).filter((k) => typeof (raw as any)[k] === "object" || typeof (raw as any)[k] === "function");
+    const keys = Object.keys(raw).filter((k) => typeof raw[k] === "object" || typeof raw[k] === "function");
     throw new Error(
       `${N8N_LOCAL_PKG} API mismatch: no workflow API with listWorkflows found. Instance keys: ${keys.join(", ") || "(none)"}. Ensure @easynet/n8n-local is a compatible version.`
     );
