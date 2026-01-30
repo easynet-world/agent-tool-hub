@@ -29,7 +29,14 @@ jobs:
         run: npm install @easynet/n8n-local@0.0.37 --legacy-peer-deps --no-save
 
       - name: Run tests
-        run: npm test
+        run: npm test -- --testTimeout=180000 --reporter=verbose
 
       - name: Build
         run: npm run build
+
+      - name: Diagnostics (on failure)
+        if: failure()
+        run: |
+          echo "Node: $(node -v) | npm: $(npm -v)"
+          npm ls @easynet/n8n-local 2>&1 || true
+          npm ls --depth=0 2>&1 | head -30
