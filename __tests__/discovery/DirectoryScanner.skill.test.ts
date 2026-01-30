@@ -76,4 +76,42 @@ describe("DirectoryScanner - Skill tools", () => {
     expect(errors).toHaveLength(1);
     expect(errors[0]!.message).toContain("SKILL.md");
   });
+
+  it("discovers one skill with multiple programs (programs map in tool.json)", async () => {
+    await mkdir(join(toolsRoot, "multi-skill"));
+    await writeFile(
+      join(toolsRoot, "multi-skill", "tool.json"),
+      JSON.stringify({
+        kind: "skill",
+        programs: {
+          default: "handler.js",
+          report: "report.js",
+        },
+      }),
+    );
+    await writeFile(
+      join(toolsRoot, "multi-skill", "SKILL.md"),
+      `---\nname: multi-skill\ndescription: Skill with multiple programs\n---\n\n# Multi\n\nUse default or report.\n`,
+    );
+    await writeFile(
+      join(toolsRoot, "multi-skill", "handler.js"),
+      `export default async function(args) { return { result: { from: "default", ...args } }; }`,
+    );
+    await writeFile(
+      join(toolsRoot, "multi-skill", "report.js"),
+      `export default async function(args) { return { result: { from: "report", ...args } }; }`,
+    );
+
+    const scanner = new DirectoryScanner({ roots: [{ path: toolsRoot, namespace: "tools" }] });
+    const specs = await scanner.scan();
+
+    expect(specs).toHaveLength(2);
+    const names = specs.map((s) => s.name).sort();
+    expect(names).toEqual(["tools/multi-skill", "tools/multi-skill/report"]);
+    expect(specs.every((s) => s.kind === "skill")).toBe(true);
+    const defaultSpec = specs.find((s) => s.name === "tools/multi-skill");
+    const reportSpec = specs.find((s) => s.name === "tools/multi-skill/report");
+    expect(defaultSpec?.description).toBe("Skill with multiple programs");
+    expect(reportSpec?.description).toBe("Skill with multiple programs");
+  });
 });

@@ -40,7 +40,7 @@ export interface MCPAdapterOptions {
   client?: MCPClientLike;
   /** Endpoint URL for the MCP server (used in ToolSpec) */
   endpoint?: string;
-  /** Tool name prefix for namespacing */
+  /** Tool name prefix when listing tools from server (default "mcp"). Invoke uses last segment after "/" as MCP name. */
   prefix?: string;
   /** Auth token for MCP server */
   authToken?: string;
@@ -186,12 +186,13 @@ export class MCPAdapter implements ToolAdapter {
     };
   }
 
+  /**
+   * Derive MCP tool name from registry name: use "/" as delimiter and take the last segment.
+   * e.g. "tools/web-search" -> "web-search", "mcp/foo" -> "foo".
+   */
   private extractMCPName(specName: string): string {
-    const prefix = `${this.prefix}/`;
-    if (specName.startsWith(prefix)) {
-      return specName.slice(prefix.length);
-    }
-    return specName;
+    const lastSlash = specName.lastIndexOf("/");
+    return lastSlash >= 0 ? specName.slice(lastSlash + 1) : specName;
   }
 
   private parseResult(response: MCPCallResult): unknown {

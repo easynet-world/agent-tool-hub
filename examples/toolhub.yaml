@@ -1,5 +1,6 @@
 # Minimal ToolHub config for agent-toolhub-example (no n8n-local).
 # Paths are relative to this file's directory (examples/).
+# Core tools (fs, http, util) are loaded automatically; optional security overrides below.
 
 toolHub:
   discovery:
@@ -17,22 +18,21 @@ toolHub:
     includeRaw: true
     defaultMaxRetries: 0
 
+  # Optional: overrides for core tools (defaults: sandbox /tmp/toolhub-sandbox, allowedHosts [])
   security:
     sandbox:
       root: /tmp/toolhub-sandbox
     network:
-      allowedHosts: []
+      allowedHosts:
+        - "*.yahooapis.com"
+        - "*.googleapis.com"
+        - "api.github.com"
 
   adapters:
     n8n:
-      mode: api
+      mode: local   # use embedded n8n-local instance (no API calls)
     mcp:
       endpoint: ""
-      prefix: tools   # so "tools/web-search" -> MCP tool name "web-search"
-    langchain:
-      tools: {}
-    comfyui:
-      apiBaseUrl: http://localhost:8188
     skill:
       definitions: {}
       handlers: {}

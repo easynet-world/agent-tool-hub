@@ -63,7 +63,14 @@ export function parseSkillMd(
   const body = trimmed.slice(endIndex + 4).trim();
 
   // Parse simple YAML (name: value pairs)
-  const frontmatter = parseSimpleYaml(yamlBlock, filePath);
+  const raw = parseSimpleYaml(yamlBlock, filePath) as Record<string, string | undefined>;
+  const frontmatter: SkillFrontmatter = {
+    name: raw.name!,
+    description: raw.description!,
+    ...(raw.license != null && raw.license !== "" && { license: raw.license }),
+    ...(raw.compatibility != null && raw.compatibility !== "" && { compatibility: raw.compatibility }),
+    ...(raw["allowed-tools"] != null && raw["allowed-tools"] !== "" && { allowedTools: raw["allowed-tools"] }),
+  };
   validateFrontmatter(frontmatter, filePath);
 
   return { frontmatter, instructions: body };

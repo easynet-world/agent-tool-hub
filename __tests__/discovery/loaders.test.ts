@@ -358,6 +358,52 @@ describe("SkillLoader", () => {
     expect(typeof result.impl).toBe("function");
   });
 
+  it("loads skill with LangChain-like export (name, description, schema, invoke)", async () => {
+    await writeFile(join(dir, "SKILL.md"), skillMdContent);
+    await writeFile(
+      join(dir, "handler.js"),
+      `export default {
+  name: "my-tool",
+  description: "A self-describing tool",
+  schema: { type: "object", properties: { x: { type: "string" } } },
+  async invoke(args) { return { result: args }; },
+};`,
+    );
+
+    const result = await loadSkillTool(dir, baseManifest);
+    expect(result.skillDefinition).toBeDefined();
+    expect(result.impl).toBeDefined();
+    expect(result.impl && typeof result.impl === "object" && "invoke" in result.impl).toBe(true);
+    expect(typeof (result.impl as { invoke: (args: unknown) => unknown }).invoke).toBe("function");
+    expect((result.impl as { name: string }).name).toBe("my-tool");
+    expect((result.impl as { description: string }).description).toBe("A self-describing tool");
+  });
+
+  it("loads skill with class export (extends StructuredTool); loader instantiates", async () => {
+    await writeFile(join(dir, "SKILL.md"), skillMdContent);
+    await writeFile(
+      join(dir, "handler.js"),
+      `import { StructuredTool } from "@langchain/core/tools";
+class MyStructuredTool extends StructuredTool {
+  name = "my-structured-tool";
+  description = "A tool implemented as class extending StructuredTool";
+  schema = { type: "object", properties: { x: { type: "string" } } };
+  async _call(args) { return { result: args }; }
+}
+export default MyStructuredTool;
+`,
+    );
+
+    const result = await loadSkillTool(dir, baseManifest);
+    expect(result.skillDefinition).toBeDefined();
+    expect(result.impl).toBeDefined();
+    expect(result.impl && typeof result.impl === "object" && "invoke" in result.impl).toBe(true);
+    expect((result.impl as { name: string }).name).toBe("my-structured-tool");
+    const out = await (result.impl as { invoke: (args: unknown) => Promise<unknown> }).invoke({ x: "hello" });
+    expect(out && typeof out === "object" && "result" in out).toBe(true);
+    expect((out as { result: { x: string } }).result?.x).toBe("hello");
+  });
+
   it("loads skill with SKILL.md and no handler (instruction-only)", async () => {
     await writeFile(join(dir, "SKILL.md"), skillMdContent);
 

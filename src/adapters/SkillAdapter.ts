@@ -295,6 +295,7 @@ export class SkillAdapter implements ToolAdapter {
     args: unknown,
     ctx: ExecContext,
   ): Promise<{ result: unknown; raw?: unknown }> {
+    const allowedTools = parseAllowedTools(def.frontmatter.allowedTools);
     const skillCtx: SkillContext = {
       requestId: ctx.requestId,
       taskId: ctx.taskId,
@@ -302,7 +303,7 @@ export class SkillAdapter implements ToolAdapter {
       userId: ctx.userId,
       skill: this.buildInvocationContext(def),
       invokeTool: this.toolInvoker
-        ? (toolName, toolArgs) => this.toolInvoker!(toolName, toolArgs, ctx)
+        ? (toolName, toolArgs) => this.invokeToolWithAllowlist(toolName, toolArgs, ctx, spec.name, allowedTools)
         : undefined,
     };
 
@@ -378,10 +379,56 @@ export class SkillAdapter implements ToolAdapter {
     // Check if spec carries a handler reference
     if (spec.impl && typeof spec.impl === "object") {
       const implObj = spec.impl as { handler?: unknown };
-      if (typeof implObj.handler === "function") {
-        return implObj.handler as SkillHandler;
+      const h = implObj.handler;
+      if (typeof h === "function") {
+        return h as SkillHandler;
+      }
+      // LangChain-like tool: { name?, description?, schema?, invoke(args) }
+      if (h && typeof h === "object" && "invoke" in h && typeof (h as { invoke: unknown }).invoke === "function") {
+        const tool = h as { invoke: (args: unknown) => Promise<unknown> };
+        return (args: unknown, _ctx: SkillContext): Promise<SkillOutput> =>
+          tool.invoke(args).then((r) => {
+            if (r != null && typeof r === "object" && "result" in r) {
+              return r as SkillOutput;
+            }
+            return { result: r };
+          });
       }
     }
     return this.handlers.get(spec.name);
   }
+
+  private async invokeToolWithAllowlist(
+    toolName: string,
+    toolArgs: unknown,
+    ctx: ExecContext,
+    skillName: string,
+    allowedTools: Set<string> | null,
+  ): Promise<unknown> {
+    // No allowed-tools frontmatter → allow all tools
+    if (allowedTools !== null && !allowedTools.has(toolName)) {
+      const list = [...allowedTools].sort().join(", ");
+      throw new Error(
+        `Skill "${skillName}" is not allowed to invoke tool "${toolName}". ` +
+          `Allowed tools: ${list || "(none)"}. Set allowed-tools in SKILL.md frontmatter to restrict sub-tool access.`,
+      );
+    }
+    return this.toolInvoker!(toolName, toolArgs, ctx);
+  }
+}
+
+/**
+ * Parse allowed-tools frontmatter (space-delimited) into a set of tool names.
+ * Returns null if not set or empty → no restriction, allow all tools.
+ */
+function parseAllowedTools(allowedTools: string | undefined): Set<string> | null {
+  if (allowedTools == null || typeof allowedTools !== "string") {
+    return null;
+  }
+  const trimmed = allowedTools.trim();
+  if (trimmed === "") {
+    return null;
+  }
+  const names = trimmed.split(/\s+/).map((s) => s.trim()).filter(Boolean);
+  return names.length === 0 ? null : new Set(names);
 }

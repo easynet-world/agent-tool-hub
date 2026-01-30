@@ -119,6 +119,26 @@ with pdfplumber.open("file.pdf") as pdf:
     expect(result.instructions).toContain("```python");
     expect(result.instructions).toContain("pdfplumber");
   });
+
+  it("parses optional frontmatter (license, compatibility, allowed-tools)", () => {
+    const content = `---
+name: spec-skill
+description: Skill with optional fields per Agent Skills spec
+license: Apache-2.0
+compatibility: Requires git and docker
+allowed-tools: Bash(git:*) Read
+---
+
+# Body
+`;
+
+    const result = parseSkillMd(content, "/test/SKILL.md");
+    expect(result.frontmatter.name).toBe("spec-skill");
+    expect(result.frontmatter.description).toContain("optional fields");
+    expect(result.frontmatter.license).toBe("Apache-2.0");
+    expect(result.frontmatter.compatibility).toBe("Requires git and docker");
+    expect(result.frontmatter.allowedTools).toBe("Bash(git:*) Read");
+  });
 });
 
 describe("validateFrontmatter", () => {
@@ -163,6 +183,40 @@ describe("validateFrontmatter", () => {
         "/test",
       ),
     ).toThrow("reserved word");
+  });
+
+  it("rejects names that start or end with hyphen", () => {
+    expect(() =>
+      validateFrontmatter(
+        { name: "-pdf-processing", description: "desc" },
+        "/test",
+      ),
+    ).toThrow("must not start or end");
+    expect(() =>
+      validateFrontmatter(
+        { name: "pdf-processing-", description: "desc" },
+        "/test",
+      ),
+    ).toThrow("must not start or end");
+  });
+
+  it("rejects names with consecutive hyphens", () => {
+    expect(() =>
+      validateFrontmatter(
+        { name: "pdf--processing", description: "desc" },
+        "/test",
+      ),
+    ).toThrow("consecutive hyphens");
+  });
+
+  it("rejects compatibility longer than 500 characters", () => {
+    const long = "x".repeat(501);
+    expect(() =>
+      validateFrontmatter(
+        { name: "valid", description: "desc", compatibility: long },
+        "/test",
+      ),
+    ).toThrow("compatibility must be at most 500");
   });
 
   it("rejects names containing 'claude'", () => {

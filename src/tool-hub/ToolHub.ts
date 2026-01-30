@@ -192,6 +192,18 @@ export class ToolHub {
   }
 
   /**
+   * Log all loaded tools to the console (and logger).
+   */
+  private logLoadedTools(label: string): void {
+    const specs = this.registry.snapshot();
+    const names = specs.map((s) => s.name).sort();
+    this.logger.info(`tools.${label}`, { count: names.length, tools: names });
+    if (names.length > 0) {
+      console.info(`[tool-hub] ${label}: ${names.length} tool(s) — ${names.join(", ")}`);
+    }
+  }
+
+  /**
    * Initialize all tools by scanning the configured roots.
    * n8n-local is started only when there are n8n specs (lazy start).
    */
@@ -212,6 +224,8 @@ export class ToolHub {
       this.n8nLocalAdapter,
       specs,
     );
+
+    this.logLoadedTools("loaded");
 
     if (this.watchConfig?.enabled) {
       this.watchRoots({
@@ -238,7 +252,7 @@ export class ToolHub {
     if (this.n8nMode === "local" && specs.some((s) => s.kind === "n8n")) {
       await this.ensureN8nLocalAdapter();
     }
-    return refreshTools(
+    const result = await refreshTools(
       this.scanner,
       {
         registry: this.registry,
@@ -250,6 +264,8 @@ export class ToolHub {
       this.n8nLocalAdapter,
       specs,
     );
+    this.logLoadedTools("reloaded");
+    return result;
   }
 
   /**

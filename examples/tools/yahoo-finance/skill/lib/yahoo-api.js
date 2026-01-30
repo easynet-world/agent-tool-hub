@@ -1,46 +1,10 @@
 /**
- * Yahoo Finance stock information skill handler.
- * Fetches quote data by symbol from Yahoo Finance public endpoints.
- * No API key required.
+ * Shared Yahoo Finance API helpers. Used by default (index), quote, and chart programs.
  */
-const USER_AGENT =
+export const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-async function handler(args) {
-  const symbol = args?.symbol;
-  if (!symbol || typeof symbol !== "string") {
-    return {
-      result: null,
-      error: "Missing or invalid 'symbol' (e.g. AAPL, MSFT)",
-    };
-  }
-
-  const ticker = String(symbol).trim().toUpperCase();
-  if (!ticker) {
-    return { result: null, error: "Symbol cannot be empty." };
-  }
-
-  try {
-    // Prefer quoteSummary; fallback to chart API
-    const summary = await fetchQuoteSummary(ticker);
-    if (summary) return { result: summary };
-
-    const chart = await fetchChart(ticker);
-    if (chart) return { result: chart };
-
-    return {
-      result: null,
-      error: `No quote data for symbol "${ticker}". Check symbol or try again later.`,
-    };
-  } catch (err) {
-    return {
-      result: null,
-      error: err instanceof Error ? err.message : String(err),
-    };
-  }
-}
-
-async function fetchQuoteSummary(symbol) {
+export async function fetchQuoteSummary(symbol) {
   const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=price,summaryDetail`;
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT },
@@ -68,7 +32,7 @@ async function fetchQuoteSummary(symbol) {
   };
 }
 
-async function fetchChart(symbol) {
+export async function fetchChart(symbol) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT },
@@ -102,5 +66,3 @@ async function fetchChart(symbol) {
     volume: last(volArr),
   };
 }
-
-export default handler;

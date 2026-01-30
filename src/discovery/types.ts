@@ -48,6 +48,13 @@ export interface ToolManifest {
    *   n8n → "workflow.json"
    */
   entryPoint?: string;
+  /**
+   * For skills only: multiple programs (entry points) in this skill directory.
+   * Map of program key → entry file (e.g. { "default": "handler.js", "report": "report.js" }).
+   * "default" is the main tool name (e.g. tools/yahoo-finance); others get tools/yahoo-finance/report.
+   * When absent, single entryPoint (or "handler") is used.
+   */
+  programs?: Record<string, string>;
   /** JSON Schema for input validation */
   inputSchema?: object;
   /** JSON Schema for output validation */
@@ -86,4 +93,6 @@ export interface LoadedTool {
   workflowDef?: unknown;
   /** For Skill tools: the parsed SKILL.md definition with progressive disclosure levels */
   skillDefinition?: SkillDefinition;
+  /** For Skill tools with multiple programs: key for naming (e.g. "default", "report") */
+  programKey?: string;
 }

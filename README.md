@@ -127,18 +127,3 @@ const result = await toolHub.invokeTool("utils.calculator", { expression: "1 + 2
 ---
 
 See `toolhub.example.yaml` for config example and `examples/` for full tool layouts.
-
-### Enhanced example (DeepAgents + S&P 500)
-
-A second example uses **LangChain 1.x** and **DeepAgents** (instead of the built-in ReAct agent) to run a more complex task: pick the top 10 S&P 500 stocks by market cap, analyze and predict, and generate an HTML report (2500+ words). Run it with:
-
-```bash
-npm run build
-npm run example:agent-toolhub-deepagents-sp500
-```
-
-Report path: `examples/output/sp500-top10-report.html`. Optional env: `OPENAI_BASE_URL`, `OPENAI_MODEL`, `OPENAI_API_KEY`, `RECURSION_LIMIT`, `DEBUG`.
-
-The example uses the framework’s **ToolHub → LangChain** bridge: `import { toolHubToLangChainTools } from "@easynet/agent-tool-hub/langchain-tools"` (requires optional peer deps `langchain`, `zod`).
-
-Requires devDependencies: `deepagents`, `langchain`, `@langchain/openai`, `zod`. If you see peer dependency conflicts (e.g. with `@easynet/n8n-local`), run `npm install --legacy-peer-deps`.

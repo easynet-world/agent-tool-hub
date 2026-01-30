@@ -38,6 +38,8 @@ function resolveRoots(
   return { roots, coreToolsInlineConfig };
 }
 
+const DEFAULT_SANDBOX_ROOT = "/tmp/toolhub-sandbox";
+
 function extractCoreToolsConfig(
   coreTools: Record<string, any>,
   security: Record<string, any>,
@@ -48,12 +50,14 @@ function extractCoreToolsConfig(
     coreTools.sandboxRoot ??
     coreTools.sandbox?.root ??
     security.sandbox?.root ??
-    system.sandbox?.root;
+    system.sandbox?.root ??
+    DEFAULT_SANDBOX_ROOT;
   const allowedHosts =
     coreTools.allowedHosts ??
     coreTools.network?.allowedHosts ??
     security.network?.allowedHosts ??
-    system.network?.allowedHosts;
+    system.network?.allowedHosts ??
+    [];
   const blockedCidrs =
     coreTools.blockedCidrs ??
     coreTools.network?.blockedCidrs ??
@@ -150,13 +154,9 @@ export function mapToolHubConfig(
   const { roots, coreToolsInlineConfig } = resolveRoots(rootsRaw, configDir);
 
   const coreTools = (coreToolsInlineConfig ?? coreToolsRaw ?? {}) as Record<string, any>;
-  const includeCoreTools = roots.some((root) => {
-    if (typeof root === "string") return root === "coreTools";
-    return root.path === "coreTools";
-  });
-  const coreToolsConfig = includeCoreTools
-    ? extractCoreToolsConfig(coreTools, security, system, configDir)
-    : undefined;
+  // Core tools are always loaded; config comes from security/coreTools with defaults
+  const includeCoreTools = true;
+  const coreToolsConfig = extractCoreToolsConfig(coreTools, security, system, configDir);
 
   const adapterConfigs = extractAdapterConfigs(adapters);
 

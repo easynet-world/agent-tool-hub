@@ -9,7 +9,7 @@ import type {
 import { DiscoveryError } from "./errors.js";
 import { loadMCPTool } from "./loaders/MCPLoader.js";
 import { loadLangChainTool } from "./loaders/LangChainLoader.js";
-import { loadSkillTool } from "./loaders/SkillLoader.js";
+import { loadSkillTools } from "./loaders/SkillLoader.js";
 import { loadN8nTool } from "./loaders/N8nLoader.js";
 import { resolveEntryPoint } from "./loaders/resolveEntry.js";
 
@@ -127,6 +127,12 @@ export class DirectoryScanner {
         }
         return this.loadLangChainTools(dirPath, dirName, inferred, false, namespace);
       }
+      if (inferred.kind === "skill") {
+        const loadedList = await loadSkillTools(dirPath, inferred, this.extensions);
+        return loadedList.map((loaded) =>
+          this.toToolSpec(loaded, dirName, dirPath, namespace),
+        );
+      }
       const loaded = await this.loadByKind(dirPath, inferred);
       return [this.toToolSpec(loaded, dirName, dirPath, namespace)];
     }
@@ -165,6 +171,12 @@ export class DirectoryScanner {
       }
       return this.loadLangChainTools(dirPath, dirName, manifest, true, namespace);
     }
+    if (manifest.kind === "skill") {
+      const loadedList = await loadSkillTools(dirPath, manifest, this.extensions);
+      return loadedList.map((loaded) =>
+        this.toToolSpec(loaded, dirName, dirPath, namespace),
+      );
+    }
     const loaded = await this.loadByKind(dirPath, manifest);
 
     // Convert to ToolSpec
@@ -179,9 +191,11 @@ export class DirectoryScanner {
     const hasN8n = await this.fileExists(join(dirPath, "workflow.json"));
     const hasMcp = await this.fileExists(join(dirPath, "mcp.json"));
     const isLangchainDir = dirName === "langchain";
-    const hasLangchain = isLangchainDir
-      ? await this.hasLangchainFiles(dirPath)
-      : await this.hasEntryPoint(dirPath, "index");
+    // In a "skill" dir, index.js is the skill default program, not a LangChain tool
+    const hasLangchain =
+      isLangchainDir
+        ? await this.hasLangchainFiles(dirPath)
+        : dirName !== "skill" && (await this.hasEntryPoint(dirPath, "index"));
 
     const kinds = [
       hasSkill ? "skill" : null,
@@ -263,8 +277,13 @@ export class DirectoryScanner {
         return loadMCPTool(dirPath, manifest);
       case "langchain":
         return loadLangChainTool(dirPath, manifest, this.extensions);
-      case "skill":
-        return loadSkillTool(dirPath, manifest, this.extensions);
+      case "skill": {
+        const list = await loadSkillTools(dirPath, manifest, this.extensions);
+        if (list.length === 0) {
+          throw new DiscoveryError(dirPath, "load", "No skill programs loaded", new Error("empty"));
+        }
+        return list[0]!;
+      }
       case "n8n":
         return loadN8nTool(dirPath, manifest);
       default:
@@ -399,6 +418,19 @@ export class DirectoryScanner {
           // Use SKILL.md frontmatter for name and description (overrides tool.json)
           spec.name = manifest.name ?? loaded.skillDefinition.frontmatter.name;
           spec.description = loaded.skillDefinition.frontmatter.description;
+          // Multiple programs: default → namespace/parent, others → namespace/parent/programKey
+          if (loaded.programKey === "default") {
+            spec.name = `${namespace}/${defaultDirName}`;
+          } else if (loaded.programKey) {
+            spec.name = `${namespace}/${defaultDirName}/${loaded.programKey}`;
+          }
+          // LangChain-like tool: use its description and schema when present (self-describing).
+          // Name stays from discovery (namespace/parent/key) so tool names remain consistent.
+          const impl = loaded.impl as { description?: string; schema?: object; invoke?: unknown } | undefined;
+          if (impl && typeof impl === "object" && typeof impl.invoke === "function") {
+            if (impl.description != null && impl.description !== "") spec.description = impl.description;
+            if (impl.schema != null && typeof impl.schema === "object") spec.inputSchema = impl.schema as object;
+          }
           spec.impl = {
             ...loaded.skillDefinition,
             handler: loaded.impl,

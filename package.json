@@ -31,7 +31,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "example:agent-toolhub": "node examples/agent-toolhub-example.mjs",
-    "example:agent-toolhub-deepagents-sp500": "node examples/agent-toolhub-deepagents-sp500.mjs",
+    "example:agent-toolhub-react-stock": "node --import tsx examples/agent-toolhub-react-stock.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
@@ -65,6 +65,7 @@
     "langchain": "^1.0.0",
     "semantic-release": "^24.2.0",
     "tsup": "^8.3.5",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
     "zod": "^3.23.0"

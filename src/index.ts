@@ -229,3 +229,22 @@ export {
   DEFAULT_CONFIG_FILE,
 } from "./config/ToolHubConfig.js";
 export type { ToolHubConfigLoadResult } from "./config/ToolHubConfig.js";
+
+// === Agent Report (HTML run report) ===
+export {
+  generateAgentReport,
+  serializeStepOutput,
+  formatStepProgress,
+  collectStreamSteps,
+  runAgentWithReport,
+  writeReportFromStream,
+} from "./report/AgentReportGenerator.js";
+export type {
+  AgentReportData,
+  AgentReportStep,
+  StreamableAgent,
+  CollectStreamStepsOptions,
+  RunAgentWithReportOptions,
+  RunAgentWithReportResult,
+  WriteReportFromStreamOptions,
+} from "./report/types.js";

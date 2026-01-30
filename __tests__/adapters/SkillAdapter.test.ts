@@ -329,6 +329,97 @@ describe("SkillAdapter", () => {
       expect((result.result as any).subToolResult).toEqual({ computed: 4 });
     });
 
+    it("allowed-tools: allows only listed tools when frontmatter set", async () => {
+      const handler: SkillHandler = async (_args, ctx) => {
+        const a = await ctx.invokeTool!("tools/a", {});
+        const b = await ctx.invokeTool!("tools/b", {});
+        return { result: { a, b } };
+      };
+
+      const toolInvoker = async (name: string) => ({ name });
+      const adapter = new SkillAdapter({ toolInvoker });
+      adapter.registerSkill(
+        "test-skill",
+        makeDefinition({
+          frontmatter: {
+            name: "test-skill",
+            description: "Test",
+            allowedTools: "tools/a tools/b",
+          },
+        }),
+        handler,
+      );
+
+      const result = await adapter.invoke(makeToolSpec(), {}, makeExecContext());
+      expect((result.result as any).a).toEqual({ name: "tools/a" });
+      expect((result.result as any).b).toEqual({ name: "tools/b" });
+    });
+
+    it("allowed-tools: throws when skill invokes tool not in list", async () => {
+      const handler: SkillHandler = async (_args, ctx) => {
+        await ctx.invokeTool!("tools/forbidden", {});
+        return { result: {} };
+      };
+
+      const toolInvoker = async () => ({});
+      const adapter = new SkillAdapter({ toolInvoker });
+      adapter.registerSkill(
+        "test-skill",
+        makeDefinition({
+          frontmatter: {
+            name: "test-skill",
+            description: "Test",
+            allowedTools: "tools/a tools/b",
+          },
+        }),
+        handler,
+      );
+
+      await expect(
+        adapter.invoke(makeToolSpec(), {}, makeExecContext()),
+      ).rejects.toThrow(/Skill "test-skill" is not allowed to invoke tool "tools\/forbidden"/);
+      await expect(
+        adapter.invoke(makeToolSpec(), {}, makeExecContext()),
+      ).rejects.toThrow(/Allowed tools: tools\/a, tools\/b/);
+    });
+
+    it("allowed-tools: no restriction when frontmatter absent or empty", async () => {
+      const handler: SkillHandler = async (_args, ctx) => {
+        const r = await ctx.invokeTool!("any/tool", {});
+        return { result: r };
+      };
+
+      const toolInvoker = async (name: string) => ({ name });
+      const adapter = new SkillAdapter({ toolInvoker });
+      adapter.registerSkill("test-skill", makeDefinition(), handler);
+
+      const result = await adapter.invoke(makeToolSpec(), {}, makeExecContext());
+      expect((result.result as any).name).toBe("any/tool");
+    });
+
+    it("allowed-tools: enforced when definition comes from spec.impl", async () => {
+      const handler: SkillHandler = async (_args, ctx) => {
+        await ctx.invokeTool!("tools/not-allowed", {});
+        return { result: {} };
+      };
+
+      const def = makeDefinition({
+        frontmatter: {
+          name: "test-skill",
+          description: "Test",
+          allowedTools: "tools/only",
+        },
+      });
+      const spec = makeToolSpec({ impl: { ...def, handler } });
+      const adapter = new SkillAdapter({
+        toolInvoker: async (name: string) => ({ name }),
+      });
+
+      await expect(adapter.invoke(spec, {}, makeExecContext())).rejects.toThrow(
+        /not allowed to invoke tool "tools\/not-allowed"/,
+      );
+    });
+
     it("returns evidence from handler", async () => {
       const handler: SkillHandler = async () => {
         return {

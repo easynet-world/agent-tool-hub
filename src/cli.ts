@@ -40,8 +40,10 @@ function parseArgv(argv: string[]): CliArgs {
     } else if (arg === "--detail" || arg === "-d") {
       const v = (args[++i] ?? "normal").toLowerCase();
       detail = v === "short" || v === "full" ? v : "normal";
-    } else if (arg && !arg.startsWith("-") && (arg === "scan" || arg === "verify" || arg === "list" || arg === "help")) {
-      command = arg;
+    } else if (arg && !arg.startsWith("-")) {
+      if (arg === "scan" || arg === "verify" || arg === "list" || arg === "help") {
+        command = arg;
+      }
     }
   }
 
@@ -201,7 +203,7 @@ async function main(argv: string[] = process.argv): Promise<number> {
       return cmdList(configPath, detail);
     default:
       printHelp();
-      return command === "help" ? 0 : 1;
+      return 1;
   }
 }
 

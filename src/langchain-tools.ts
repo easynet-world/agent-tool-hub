@@ -8,11 +8,13 @@
  * ```ts
  * import { createAgentToolHub, toolHubToLangChainTools } from "@easynet/agent-tool-hub/langchain-tools";
  * const hub = await createAgentToolHub("toolhub.yaml");
- * const tools = toolHubToLangChainTools(hub);
- * // Pass tools to createDeepAgent({ tools }) or other LangChain agent
+ * // hub.tools is the LangChain tools array
+ * const agent = createDeepAgent({ tools: hub.tools, ... });
+ * // Or: const tools = toolHubToLangChainTools(hub);
  * ```
  */
 
+import { createAgentToolHub as createAgentToolHubFromRuntime } from "./toolhub-runtime.js";
 import { tool } from "langchain";
 import { z } from "zod";
 import type { ToolSpec } from "./types/ToolSpec.js";
@@ -72,8 +74,14 @@ function extractToolArgs(args: unknown): Record<string, unknown> {
  */
 export function toolHubToLangChainTools(hub: ToolHubLike): unknown[] {
   const specs = hub.getRegistry().snapshot();
-  return specs.map((spec) =>
-    tool(
+  return specs.map((spec) => {
+    const opts = {
+      name: spec.name,
+      description: spec.description ?? `Tool: ${spec.name}`,
+      schema: TOOL_ARGS_SCHEMA,
+    };
+    // Cast opts to avoid TS2589 (excessively deep type instantiation) from langchain tool()
+    const t = tool(
       async (args: unknown) => {
         const normalized = extractToolArgs(args);
         const result = await hub.invokeTool(spec.name, normalized);
@@ -81,11 +89,24 @@ export function toolHubToLangChainTools(hub: ToolHubLike): unknown[] {
           ? result.result
           : { error: result.error?.message ?? "Tool failed" };
       },
-      {
-        name: spec.name,
-        description: spec.description ?? `Tool: ${spec.name}`,
-        schema: TOOL_ARGS_SCHEMA,
-      },
-    ),
-  );
+      opts as Parameters<typeof tool>[1],
+    );
+    return t as unknown;
+  });
+}
+
+/**
+ * Create an AgentToolHub from a config path and return it with a `.tools` getter
+ * that returns LangChain tools. Use with LangChain/DeepAgents agents.
+ *
+ * @param configPath - Path to toolhub.yaml (or other config file)
+ * @returns AgentToolHub instance with `.tools` (array of LangChain tools)
+ */
+export async function createAgentToolHub(configPath: string) {
+  const hub = await createAgentToolHubFromRuntime(configPath);
+  return Object.assign(hub, {
+    get tools(): unknown[] {
+      return toolHubToLangChainTools(hub);
+    },
+  });
 }

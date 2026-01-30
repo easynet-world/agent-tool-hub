@@ -10,24 +10,35 @@
  */
 
 /**
- * YAML frontmatter from SKILL.md.
- * This is Level 1 (metadata) — always loaded at startup for discovery.
+ * YAML frontmatter from SKILL.md (Agent Skills spec).
+ * Level 1 (metadata) — always loaded at startup for discovery.
+ * @see https://agentskills.io/specification
  */
 export interface SkillFrontmatter {
   /**
-   * Skill name identifier.
-   * - Max 64 characters
-   * - Lowercase letters, numbers, and hyphens only
+   * Skill name identifier (required).
+   * - Max 64 characters; lowercase letters, numbers, hyphens only
+   * - Must not start or end with hyphen; no consecutive hyphens
    */
   name: string;
 
   /**
-   * What the skill does and when to use it.
+   * What the skill does and when to use it (required).
    * - Max 1024 characters
-   * - Should include triggers/contexts for activation
-   * - Written in third person
    */
   description: string;
+
+  /** Optional: license name or reference (e.g. Apache-2.0, LICENSE.txt). */
+  license?: string;
+
+  /** Optional: environment requirements, max 500 characters. */
+  compatibility?: string;
+
+  /** Optional: arbitrary key-value metadata. */
+  metadata?: Record<string, string>;
+
+  /** Optional: space-delimited list of pre-approved tools (experimental). */
+  allowedTools?: string;
 }
 
 /**
@@ -84,6 +95,7 @@ export class SkillManifestError extends Error {
 const NAME_PATTERN = /^[a-z0-9-]+$/;
 const NAME_MAX_LENGTH = 64;
 const DESCRIPTION_MAX_LENGTH = 1024;
+const COMPATIBILITY_MAX_LENGTH = 500;
 const RESERVED_WORDS = ["anthropic", "claude"];
 const XML_TAG_PATTERN = /<\/?[a-zA-Z][^>]*>/;
 
@@ -111,6 +123,20 @@ export function validateFrontmatter(
       filePath,
       "name",
       "name must contain only lowercase letters, numbers, and hyphens",
+    );
+  }
+  if (fm.name.startsWith("-") || fm.name.endsWith("-")) {
+    throw new SkillManifestError(
+      filePath,
+      "name",
+      "name must not start or end with a hyphen",
+    );
+  }
+  if (fm.name.includes("--")) {
+    throw new SkillManifestError(
+      filePath,
+      "name",
+      "name must not contain consecutive hyphens",
     );
   }
   if (XML_TAG_PATTERN.test(fm.name)) {
@@ -147,5 +173,16 @@ export function validateFrontmatter(
       "description",
       "description cannot contain XML tags",
     );
+  }
+
+  // Optional: compatibility max 500 characters
+  if (fm.compatibility != null && typeof fm.compatibility === "string") {
+    if (fm.compatibility.length > COMPATIBILITY_MAX_LENGTH) {
+      throw new SkillManifestError(
+        filePath,
+        "compatibility",
+        `compatibility must be at most ${COMPATIBILITY_MAX_LENGTH} characters (got ${fm.compatibility.length})`,
+      );
+    }
   }
 }
