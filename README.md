@@ -65,7 +65,7 @@ const agent = createAgent({
   tools: toolHub.tools, // discovered tools from SKILL / LangChain / MCP / n8n
 });
 const stream = await agent.stream(/* your messages */);
- ... 
+// ...
 
 // 3. Shutdown
 await toolHub.shutdown();

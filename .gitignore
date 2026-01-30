@@ -7,4 +7,5 @@ toolhub.yaml
 examples/output/
 # Local PR / report drafts
 .pr-body.md
+.pr-body-gh.txt
 PR_GENERATE.md
