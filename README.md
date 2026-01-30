@@ -43,7 +43,7 @@ Output: console step-by-step progress + an HTML report (e.g. `GOOGL-research-rep
 
 | Report | Debug |
 |--------|-------|
-| [![Report tab](examples/report-1.png)](examples/report-1.png) | [![Debug tab](examples/report-2.png)](examples/report-2.png) |
+| [![Report tab](docs/report-1.png)](docs/report-1.png) | [![Debug tab](docs/report-2.png)](docs/report-2.png) |
 
 ---
 

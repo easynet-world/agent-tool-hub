@@ -19,7 +19,7 @@ feat: colorful agent report + README highlight + AGENT_SKILLS_SPEC link
 ### Report (highlight)
 
 - **`src/report/agent-report-template.ts`** — More colorful styling: blue/emerald accent palette, gradient header, colored tabs and table header, alternating table rows, clearer headings and labels.
-- **`README.md`** — Added "Agent Run Report" section with Report and Debug screenshots (`examples/report-1.png`, `examples/report-2.png`) so the HTML report is clearly a highlight.
+- **`README.md`** — Added "Agent Run Report" section with Report and Debug screenshots (`docs/report-1.png`, `docs/report-2.png`) so the HTML report is clearly a highlight.
 
 ### README
 
@@ -43,12 +43,12 @@ feat: colorful agent report + README highlight + AGENT_SKILLS_SPEC link
 ## How to verify
 
 1. `npm run build && npm run example:agent-toolhub-react-stock`
-2. Open `AAPL-research-report.html` — confirm new colors and layout.
+2. Open the generated `AAPL-research-report.html` (or sample [docs/AAPL-research-report.html](docs/AAPL-research-report.html)) — confirm new colors and layout.
 3. README: confirm "Agent Run Report" section and screenshots render on GitHub.
 
 ## Checklist
 
 - [x] Build passes
 - [x] Tests pass
-- [x] Report screenshots included (`examples/report-1.png`, `examples/report-2.png`)
+- [x] Report screenshots included (`docs/report-1.png`, `docs/report-2.png`)
 - [x] CI passes (npm ci --legacy-peer-deps)
