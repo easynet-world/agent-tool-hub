@@ -72,6 +72,25 @@ export class N8nLocalAdapter implements ToolAdapter {
     this.logger = createLogger({ ...options.debug, prefix: "N8nLocalAdapter" });
   }
 
+  /** Resolve workflow API from @easynet/n8n-local instance. */
+  private getWorkflowApi(instance: N8nLocalInstance): N8nLocalInstance["workflow"] {
+    const raw = instance as Record<string, unknown>;
+    const candidates = [
+      raw.workflow,
+      raw.workflowManager,
+      (raw.serverManager as Record<string, unknown>)?.workflow,
+      (raw.managers as Record<string, unknown>)?.workflow,
+    ].filter(Boolean);
+    for (const api of candidates) {
+      const a = api as { listWorkflows?: unknown };
+      if (a && typeof a.listWorkflows === "function") return api as N8nLocalInstance["workflow"];
+    }
+    const keys = Object.keys(raw).filter((k) => typeof (raw as any)[k] === "object" || typeof (raw as any)[k] === "function");
+    throw new Error(
+      `${N8N_LOCAL_PKG} API mismatch: no workflow API with listWorkflows found. Instance keys: ${keys.join(", ") || "(none)"}. Ensure @easynet/n8n-local is a compatible version.`
+    );
+  }
+
   private async ensureInstance(): Promise<N8nLocalInstance> {
     if (this.instance) return this.instance;
     if (!this.instancePromise) {
@@ -173,7 +192,8 @@ export class N8nLocalAdapter implements ToolAdapter {
     this.logger.info("n8nlocal.sync.start", { count: specs.length });
     const instance = await this.ensureInstance();
     await this.ensureStarted();
-    const workflows = await instance.workflow.listWorkflows();
+    const workflowApi = this.getWorkflowApi(instance);
+    const workflows = await workflowApi.listWorkflows();
     const byId = new Map(workflows.map((wf: { id: unknown; name: string }) => [String(wf.id), wf]));
     const byName = new Map(workflows.map((wf: { id: unknown; name: string }) => [String(wf.name), wf]));
 
@@ -185,10 +205,10 @@ export class N8nLocalAdapter implements ToolAdapter {
       const existing = byId.get(id) ?? byName.get(name);
 
       if (existing) {
-        await instance.workflow.updateWorkflow(existing.id, normalized as any);
+        await workflowApi.updateWorkflow(existing.id, normalized as any);
         this.workflowMap.set(spec.name, String(existing.id));
       } else {
-        const imported = await instance.workflow.importWorkflow(normalized as any);
+        const imported = await workflowApi.importWorkflow(normalized as any);
         this.workflowMap.set(spec.name, String(imported.id));
       }
     }
@@ -212,9 +232,10 @@ export class N8nLocalAdapter implements ToolAdapter {
     if (cached) return cached;
 
     const instance = await this.ensureInstance();
+    const workflowApi = this.getWorkflowApi(instance);
     const workflowDef = this.getWorkflowDefinition(spec);
     const normalized = this.normalizeWorkflow(workflowDef, spec);
-    const imported = await instance.workflow.importWorkflow(normalized as any);
+    const imported = await workflowApi.importWorkflow(normalized as any);
     const workflowId = String(imported.id);
     this.workflowMap.set(spec.name, workflowId);
     return workflowId;

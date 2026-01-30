@@ -58,15 +58,16 @@
     "uuid": "^11.0.5"
   },
   "devDependencies": {
-    "@langchain/openai": "^1.0.0",
+    "@langchain/core": "1.1.17",
+    "@langchain/openai": "1.2.3",
     "@semantic-release/git": "^10.0.1",
     "@types/jmespath": "^0.15.2",
     "@types/js-yaml": "^4.0.9",
     "@types/mustache": "^4.2.5",
     "@types/node": "^22.10.0",
     "@types/uuid": "^10.0.0",
-    "deepagents": "^1.0.0",
-    "langchain": "^1.0.0",
+    "deepagents": "1.6.1",
+    "langchain": "1.2.7",
     "semantic-release": "^24.2.0",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
@@ -92,6 +93,11 @@
     "zod": {
       "optional": true
     }
+  },
+  "overrides": {
+    "@langchain/core": "1.1.17",
+    "deepagents": "1.6.1",
+    "langchain": "1.2.7"
   },
   "engines": {
     "node": ">=18.0.0"
