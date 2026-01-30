@@ -1,8 +1,6 @@
 # Agent Tool Hub
 
-**One registry, many protocols** — discover and run tools from MCP, LangChain, n8n, and SKILL through a single PTC runtime. [Source](https://github.com/easynet-world/agent-tool-hub)
-
-Define tools with simple, familiar formats: drop a folder under a configured root and use the protocol you like. One tool can be exposed in multiple protocols in the same folder.
+**One registry, many protocols** — MCP, LangChain, n8n, SKILL in one PTC runtime. [Source](https://github.com/easynet-world/agent-tool-hub) Drop a folder under a root; one tool can expose multiple protocols.
 
 ---
 
@@ -19,27 +17,31 @@ Define tools with simple, familiar formats: drop a folder under a configured roo
 
 ## Install
 
+Node 18+.
+
+**Default** — MCP / LangChain / SKILL only (~tens of MB):
+
 ```bash
 npm install @easynet/agent-tool-hub
 ```
 
-Node 18+ required.
+**+ n8n** — workflows / stock example (~1.3GB):
+
+```bash
+npm install @easynet/agent-tool-hub @easynet/n8n-local
+```
 
 ---
 
 ## Run the stock research example
 
-End-to-end demo: **ReAct agent** + **yahoo-finance SKILL tools** + **HTML report**. After [installing](#install), run (examples are bundled; no clone needed):
+ReAct + yahoo-finance SKILL + HTML report. After [install](#install):
 
 ```bash
 npx agent-toolhub-react-stock GOOGL
 ```
 
-Pass the ticker symbol (e.g. `GOOGL`, `AAPL`, `MSFT`). **Configure your own LLM** — point the example to your OpenAI-compatible API (base URL and API key) in [examples/agent-toolhub-react-stock.mjs](examples/agent-toolhub-react-stock.mjs) or via env (e.g. `OPENAI_API_KEY`, `OPENAI_BASE_URL`). The bundled example uses placeholder values; replace them with your model endpoint.
-
-Output: console step-by-step progress + an HTML report (e.g. `GOOGL-research-report.html`) in the current directory. See a sample report: [easynet-world.github.io/agent-tool-hub/AAPL-research-report.html](https://easynet-world.github.io/agent-tool-hub/AAPL-research-report.html).
-
-**Agent Run Report** — The generated HTML report is a highlight: it shows system/user prompts, the rendered Markdown report, and a Debug tab with step-by-step execution and token usage.
+Ticker: `GOOGL`, `AAPL`, `MSFT`. Set LLM in [examples/agent-toolhub-react-stock.mjs](examples/agent-toolhub-react-stock.mjs) or env (`OPENAI_API_KEY`, `OPENAI_BASE_URL`). Output: console + `GOOGL-research-report.html`. [Sample report](https://easynet-world.github.io/agent-tool-hub/AAPL-research-report.html).
 
 | Report | Debug |
 |--------|-------|
@@ -49,9 +51,7 @@ Output: console step-by-step progress + an HTML report (e.g. `GOOGL-research-rep
 
 ## Use
 
-### Embed in LangChain (minimal)
-
-Initialize the runtime, then pass the tools to your agent:
+### Embed in LangChain
 
 ```ts
 import { createAgentToolHub } from "@easynet/agent-tool-hub/langchain-tools";
@@ -71,33 +71,38 @@ const stream = await agent.stream(/* your messages */);
 await toolHub.shutdown();
 ```
 
-**Tracking & reports** — Optional: `formatStepProgress(step)` for console; `writeReportFromStream(stream, { htmlReportPath, onStep })` for an HTML report.
+Optional: `formatStepProgress(step)` for console; `writeReportFromStream(stream, { htmlReportPath, onStep })` for HTML report.
 
 ---
 
 ## Code reference
 
-Full examples for each tool type: [SKILL](#skill) · [LangChain](#langchain) · [MCP](#mcp) · [n8n](#n8n).
+[SKILL](#skill) · [LangChain](#langchain) · [MCP](#mcp) · [n8n](#n8n).
 
 ### SKILL
 
-Markdown spec + JS handler. Put under `skill/`. Full spec compliance and implementation details: [docs/AGENT_SKILLS_SPEC.md](docs/AGENT_SKILLS_SPEC.md).
+Markdown (SKILL.md) under `skill/`. Progressive disclosure:
 
-```yaml
+- **Level 1** = frontmatter (name, description)
+- **Level 2** = body (instructions)
+- **Level 3** = resources (e.g. `references/`, `scripts/`, `assets/`) — scanned from the skill dir, exposed as resource list; agents can reference them by path
+
+[Spec & impl](docs/AGENT_SKILLS_SPEC.md).
+
+```markdown
 # skill/SKILL.md
 ---
 name: my-tool
 description: What your tool does.
 ---
-```
 
-```js
-// skill/handler.js
-async function handler(args) {
-  const { x, y } = args ?? {};
-  return { result: { sum: Number(x) + Number(y) } };
-}
-export default handler;
+# Instructions (Level 2)
+
+Steps the agent should follow when using this skill.
+
+# Level 3 (resources)
+
+Put files under the skill dir (e.g. `references/REFERENCE.md`, `scripts/`, `assets/`). They appear in the resource list and can be read by path.
 ```
 
 ### LangChain
@@ -122,7 +127,7 @@ export default new CalculatorTool();
 
 ### MCP
 
-We do **not** provide MCP server implementation—we provide an **MCP client** that connects to existing MCP servers. Put a Cursor-style `mcp.json` under `mcp/`. To implement an MCP server, we recommend [**easy-mcp-server**](https://www.npmjs.com/package/easy-mcp-server).
+MCP **client** only; put Cursor-style `mcp.json` under `mcp/`. MCP servers: [easy-mcp-server](https://www.npmjs.com/package/easy-mcp-server).
 
 ```json
 // mcp/mcp.json
@@ -138,7 +143,7 @@ We do **not** provide MCP server implementation—we provide an **MCP client** t
 
 ### n8n
 
-Drop an n8n workflow JSON under `n8n/`. We run a local n8n server ([**@easynet/n8n-local**](https://www.npmjs.com/package/@easynet/n8n-local)) and call the instance directly—no API.
+Workflow JSON under `n8n/`; local server via [@easynet/n8n-local](https://www.npmjs.com/package/@easynet/n8n-local). Optional: `npm install @easynet/n8n-local`.
 
 ```json
 // n8n/workflow.json

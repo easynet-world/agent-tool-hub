@@ -40,10 +40,11 @@
     "clean": "rm -rf dist",
     "dump:tools": "npm run build && node scripts/dump-tools.mjs",
     "lint:lines": "./scripts/check-line-count.sh",
-    "lint:functions": "python3 scripts/check-function-length.py"
+    "lint:functions": "python3 scripts/check-function-length.py",
+    "deps:tree": "npm ls --all",
+    "deps:size": "du -sh node_modules/* 2>/dev/null | sort -hr | head -40"
   },
   "dependencies": {
-    "@easynet/n8n-local": "^0.0.37",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "cockatiel": "^3.2.1",
