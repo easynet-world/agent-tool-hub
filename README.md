@@ -8,12 +8,12 @@ Define tools with simple, familiar formats: drop a folder under a configured roo
 
 ## What we support
 
-| Supported tools | Folder | How to write | Spec |
-|-----------------|--------|--------------|------|
-| **SKILL** | `skill/` | We support all native SKILL spec features (frontmatter, body, handler, resources).<br>Example: [yahoo-finance/skill](examples/tools/yahoo-finance/skill/), [system-time/skill](examples/tools/system-time/skill/).<br>Our implementation vs spec: [AGENT_SKILLS_SPEC](docs/AGENT_SKILLS_SPEC.md). | [Agent Skills](https://agentskills.io/specification) |
-| **LangChain** | `langchain/` | Just write a LangChain `StructuredTool` class; we auto-discover it.<br>Example: [filesystem/langchain](examples/tools/filesystem/langchain/), [page-access/langchain](examples/tools/page-access/langchain/). | [LangChain Tools](https://js.langchain.com/docs/modules/agents/tools/) |
-| **MCP** | `mcp/` | We do not provide MCP server code; we provide an **MCP client** that connects to MCP servers. Config: Cursor-style JSON.<br>To write an MCP server, we recommend [easy-mcp-server](https://www.npmjs.com/package/easy-mcp-server).<br>Example: [web-search/mcp](examples/tools/web-search/mcp/). | [MCP Specification](https://modelcontextprotocol.io/specification/latest) |
-| **n8n** | `n8n/` | We run a local n8n server ([@easynet/n8n-local](https://www.npmjs.com/package/@easynet/n8n-local)) and call the instance directly—no API. | [n8n Workflows](https://docs.n8n.io/workflows/) |
+| Supported tools | How to write | Spec |
+|-----------------|--------------|------|
+| **SKILL** | We fully support the SKILL spec with any LLM.<br>[Examples](examples/tools/yahoo-finance/skill/)<br>[SKILL spec and our implementation support](docs/AGENT_SKILLS_SPEC.md) | [Agent Skills](https://agentskills.io/specification) |
+| **LangChain** | Export a `StructuredTool` in `langchain/`; we auto-discover.<br>[Examples](examples/tools/filesystem/langchain/) | [LangChain Tools](https://js.langchain.com/docs/modules/agents/tools/) |
+| **MCP** | Put `mcp.json` (Cursor-style) in `mcp/`; we connect as client.<br>We recommend [easy-mcp-server](https://www.npmjs.com/package/easy-mcp-server) for writing MCP servers.<br>[Example](examples/tools/web-search/mcp/) | [MCP Specification](https://modelcontextprotocol.io/specification/latest) |
+| **n8n** | Put workflow JSON in `n8n/`; we run local n8n.<br>[@easynet/n8n-local](https://www.npmjs.com/package/@easynet/n8n-local) | [n8n Workflows](https://docs.n8n.io/workflows/) |
 
 ---
 
@@ -37,7 +37,7 @@ npx agent-toolhub-react-stock GOOGL
 
 Pass the ticker symbol (e.g. `GOOGL`, `AAPL`, `MSFT`). **Configure your own LLM** — point the example to your OpenAI-compatible API (base URL and API key) in [examples/agent-toolhub-react-stock.mjs](examples/agent-toolhub-react-stock.mjs) or via env (e.g. `OPENAI_API_KEY`, `OPENAI_BASE_URL`). The bundled example uses placeholder values; replace them with your model endpoint.
 
-Output: console step-by-step progress + an HTML report (e.g. `GOOGL-research-report.html`) in the current directory.
+Output: console step-by-step progress + an HTML report (e.g. `GOOGL-research-report.html`) in the current directory. See a sample report: [examples/reports/AAPL-research-report.html](examples/reports/AAPL-research-report.html).
 
 **Agent Run Report** — The generated HTML report is a highlight: it shows system/user prompts, the rendered Markdown report, and a Debug tab with step-by-step execution and token usage.
 
